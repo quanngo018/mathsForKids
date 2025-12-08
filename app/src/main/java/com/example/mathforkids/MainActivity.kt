@@ -111,9 +111,9 @@ fun AppNavigator() {
         // ---------------- Register ----------------
         composable(Screen.Register.route) {
             RegisterScreen(
-                onRegister = { username, password ->
+                onRegister = { username, password, role ->
                     if (registeredUsers.any { it.first == username }) return@RegisterScreen
-                    registeredUsers.add(Triple(username, password, "student"))
+                    registeredUsers.add(Triple(username, password, role))
                     navController.popBackStack()
                 },
                 onBack = { navController.popBackStack() }
@@ -255,7 +255,7 @@ fun LoginScreen(
             contentScale = ContentScale.Crop
         )
 
-        Column(modifier = Modifier.offset(y = (-40).dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(modifier = Modifier.offset(y = (-100).dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text("Đăng nhập", fontSize = 32.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(20.dp))
 
@@ -313,10 +313,20 @@ fun LoginScreen(
 
 // ----------------------------- Register Screen -----------------------------
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RegisterScreen(onRegister: (String, String) -> Unit, onBack: () -> Unit) {
+fun RegisterScreen(onRegister: (String, String, String) -> Unit, onBack: () -> Unit) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var selectedRole by remember { mutableStateOf("student") }
+    var expanded by remember { mutableStateOf(false) }
+
+    val roles = mapOf(
+        "student" to "🎓 Học sinh",
+        "parent" to "👨‍👩‍👧 Phụ huynh",
+        "teacher" to "👨‍🏫 Giáo viên",
+        "admin" to "⚙️ Quản trị viên"
+    )
 
     Box(
         Modifier.fillMaxSize(),
@@ -334,49 +344,101 @@ fun RegisterScreen(onRegister: (String, String) -> Unit, onBack: () -> Unit) {
             modifier = Modifier.offset(y = (-40).dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Đăng ký", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            Text("Đăng ký", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color.Black)
             Spacer(Modifier.height(30.dp))
 
             OutlinedTextField(
                 value = username,
                 onValueChange = { username = it },
                 label = { Text("Tên đăng nhập") },
-                modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFF3F51B5),
                     unfocusedBorderColor = Color.Gray,
                     focusedLabelColor = Color(0xFF3F51B5),
                     unfocusedLabelColor = Color.Gray,
                     focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.DarkGray
+                    unfocusedTextColor = Color.Black,
+                    cursorColor = Color.Black
                 )
             )
+
+            Spacer(Modifier.height(12.dp))
 
             OutlinedTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = { Text("Tên đăng nhập") },
-                modifier = Modifier.fillMaxWidth(),
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Mật khẩu") },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color(0xFF3F51B5),
                     unfocusedBorderColor = Color.Gray,
                     focusedLabelColor = Color(0xFF3F51B5),
                     unfocusedLabelColor = Color.Gray,
                     focusedTextColor = Color.Black,
-                    unfocusedTextColor = Color.DarkGray
+                    unfocusedTextColor = Color.Black,
+                    cursorColor = Color.Black
                 )
             )
 
+            Spacer(Modifier.height(12.dp))
+
+            // Dropdown for Role Selection
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded }
+            ) {
+                OutlinedTextField(
+                    value = roles[selectedRole] ?: "",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Loại người dùng") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier.menuAnchor(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF3F51B5),
+                        unfocusedBorderColor = Color.Gray,
+                        focusedLabelColor = Color(0xFF3F51B5),
+                        unfocusedLabelColor = Color.Gray,
+                        focusedTextColor = Color.Black,
+                        unfocusedTextColor = Color.Black
+                    )
+                )
+
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.background(Color.White)
+                ) {
+                    roles.forEach { (roleValue, roleLabel) ->
+                        DropdownMenuItem(
+                            text = { Text(roleLabel, color = Color.Black) },
+                            onClick = {
+                                selectedRole = roleValue
+                                expanded = false
+                            },
+                            colors = MenuDefaults.itemColors(
+                                textColor = Color.Black
+                            ),
+                            modifier = Modifier.background(Color.White)
+                        )
+                    }
+                }
+            }
 
             Spacer(Modifier.height(20.dp))
-            Button(onClick = {
-                if (username.isNotEmpty() && password.isNotEmpty()) onRegister(username, password)
-            }) {
+            Button(
+                onClick = {
+                    if (username.isNotEmpty() && password.isNotEmpty()) {
+                        onRegister(username, password, selectedRole)
+                    }
+                }
+            ) {
                 Text("Tạo tài khoản")
             }
 
             Spacer(Modifier.height(10.dp))
-            TextButton(onClick = onBack) { Text("⬅ Quay lại đăng nhập") }
+            TextButton(onClick = onBack) { 
+                Text("⬅ Quay lại đăng nhập", color = Color.White) 
+            }
         }
     }
 }
