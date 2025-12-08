@@ -1,6 +1,7 @@
 package com.example.mathforkids
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -14,6 +15,7 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
 import com.example.mathforkids.ui.theme.MathForKidsTheme
 import androidx.compose.foundation.Image
 import androidx.compose.ui.res.painterResource
@@ -50,16 +52,20 @@ fun AppNavigator() {
 
     val navController = rememberNavController()
 
-    // Demo users
+    // Demo users with roles: username to (password, role)
     var registeredUsers = remember {
         mutableStateListOf(
-            "demo" to "123",
-            "test" to "123",
-            "admin" to "admin"
+            Triple("ph", "1", "parent"),
+            Triple("hs", "1", "student"),
+            Triple("admin", "1", "admin"),
+            Triple("teacher", "1", "teacher"),
+            Triple("demo", "123", "student"),
+            Triple("test", "123", "student")
         )
     }
 
     var currentUser by remember { mutableStateOf("") }
+    var currentUserRole by remember { mutableStateOf("") }
 
     // Game results
     var results = remember { mutableStateListOf<GameResult>() }
@@ -76,10 +82,21 @@ fun AppNavigator() {
         composable(Screen.Login.route) {
             LoginScreen(
                 onLogin = { username, password ->
-                    val ok = registeredUsers.any { it.first == username && it.second == password }
-                    if (ok) {
+                    val user = registeredUsers.find { it.first == username && it.second == password }
+                    if (user != null) {
                         currentUser = username
-                        navController.navigate(Screen.Menu.route) {
+                        currentUserRole = user.third
+                        
+                        // Navigate based on role
+                        val destination = when (user.third) {
+                            "student" -> Screen.StudentHome.route
+                            "parent" -> Screen.ParentHome.route
+                            "teacher" -> Screen.TeacherHome.route
+                            "admin" -> Screen.AdminHome.route
+                            else -> Screen.Menu.route
+                        }
+                        
+                        navController.navigate(destination) {
                             popUpTo(Screen.Login.route) { inclusive = true }
                         }
                         true
@@ -96,7 +113,7 @@ fun AppNavigator() {
             RegisterScreen(
                 onRegister = { username, password ->
                     if (registeredUsers.any { it.first == username }) return@RegisterScreen
-                    registeredUsers.add(username to password)
+                    registeredUsers.add(Triple(username, password, "student"))
                     navController.popBackStack()
                 },
                 onBack = { navController.popBackStack() }
@@ -157,6 +174,57 @@ fun AppNavigator() {
             )
         }
 
+        // ---------------- Student Home ----------------
+        composable(Screen.StudentHome.route) {
+            StudentHomeScreen(
+                username = currentUser,
+                onNavigateToLuyenTap = {
+                    navController.navigate(Screen.LevelSelection.route)
+                },
+                onLogout = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.StudentHome.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // ---------------- Parent Home ----------------
+        composable(Screen.ParentHome.route) {
+            ParentHomeScreen(
+                username = currentUser,
+                onLogout = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.ParentHome.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // ---------------- Teacher Home ----------------
+        composable(Screen.TeacherHome.route) {
+            TeacherHomeScreen(
+                username = currentUser,
+                onLogout = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.TeacherHome.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // ---------------- Admin Home ----------------
+        composable(Screen.AdminHome.route) {
+            AdminHomeScreen(
+                username = currentUser,
+                onLogout = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.AdminHome.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         // ---------------- Dashboard ----------------
         composable(Screen.Dashboard.route) {
             DashboardScreen(
@@ -197,15 +265,32 @@ fun LoginScreen(
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text("🎮 Tài khoản demo:", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                    Text("• demo / 123", fontSize = 12.sp)
-                    Text("• test / 123", fontSize = 12.sp)
-                    Text("• admin / admin", fontSize = 12.sp)
+                    Text("• ph / 1 (Phụ huynh)", fontSize = 12.sp)
+                    Text("• hs / 1 (Học sinh)", fontSize = 12.sp)
+                    Text("• admin / 1 (Admin)", fontSize = 12.sp)
+                    Text("• teacher / 1 (Giáo viên)", fontSize = 12.sp)
                 }
             }
 
             Spacer(Modifier.height(20.dp))
-            OutlinedTextField(value = username, onValueChange = { username = it; error = "" }, label = { Text("Tên người dùng") })
-            OutlinedTextField(value = password, onValueChange = { password = it; error = "" }, label = { Text("Mật khẩu") })
+            OutlinedTextField(
+                value = username,
+                onValueChange = { username = it; error = "" },
+                label = { Text("Tên đăng nhập") },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black
+                )
+            )
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it; error = "" },
+                label = { Text("Mật khẩu") },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black
+                )
+            )
 
             Spacer(Modifier.height(20.dp))
             Button(onClick = {
@@ -430,5 +515,198 @@ fun StatCard(label: String, value: Any, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, color = Color.DarkGray)
         Text(value.toString(), fontSize = 30.sp, fontWeight = FontWeight.Bold, color = color)
+    }
+}
+
+// ----------------------------- Student Home Screen -----------------------------
+
+@Composable
+fun StudentHomeScreen(
+    username: String,
+    onNavigateToLuyenTap: () -> Unit,
+    onLogout: () -> Unit
+) {
+    val context = LocalContext.current
+    
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFFE1BEE7), Color(0xFFFFF8E1)))),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Xin chào, $username 👋", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(40.dp))
+
+            Button(
+                onClick = onNavigateToLuyenTap,
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .height(70.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+            ) { Text("📚 Luyện tập", fontSize = 24.sp, fontWeight = FontWeight.Bold) }
+
+            Spacer(Modifier.height(20.dp))
+
+            Button(
+                onClick = { 
+                    Toast.makeText(context, "Chức năng đang cập nhật", Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .height(70.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
+            ) { Text("✏️ Kiểm tra", fontSize = 24.sp, fontWeight = FontWeight.Bold) }
+
+            Spacer(Modifier.height(20.dp))
+
+            Button(
+                onClick = onLogout,
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .height(60.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+            ) { Text("Đăng xuất", fontSize = 20.sp, color = Color.White) }
+        }
+    }
+}
+
+// ----------------------------- Parent Home Screen -----------------------------
+
+@Composable
+fun ParentHomeScreen(
+    username: String,
+    onLogout: () -> Unit
+) {
+    val context = LocalContext.current
+    
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFFE1BEE7), Color(0xFFFFF8E1)))),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Xin chào, $username 👋", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(40.dp))
+
+            Button(
+                onClick = { 
+                    Toast.makeText(context, "Chức năng đang cập nhật", Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .height(70.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+            ) { Text("📊 Xem thống kê học tập", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+
+            Spacer(Modifier.height(20.dp))
+
+            Button(
+                onClick = onLogout,
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .height(60.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+            ) { Text("Đăng xuất", fontSize = 20.sp, color = Color.White) }
+        }
+    }
+}
+
+// ----------------------------- Teacher Home Screen -----------------------------
+
+@Composable
+fun TeacherHomeScreen(
+    username: String,
+    onLogout: () -> Unit
+) {
+    val context = LocalContext.current
+    
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFFE1BEE7), Color(0xFFFFF8E1)))),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Xin chào, $username 👋", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(40.dp))
+
+            Button(
+                onClick = { 
+                    Toast.makeText(context, "Chức năng đang cập nhật", Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .height(70.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+            ) { Text("📖 Chuẩn bị bài giảng", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+
+            Spacer(Modifier.height(20.dp))
+
+            Button(
+                onClick = { 
+                    Toast.makeText(context, "Chức năng đang cập nhật", Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .height(70.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
+            ) { Text("✏️ Giao bài tập", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+
+            Spacer(Modifier.height(20.dp))
+
+            Button(
+                onClick = { 
+                    Toast.makeText(context, "Chức năng đang cập nhật", Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .height(70.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFBC02D))
+            ) { Text("📊 Xem thống kê", fontSize = 22.sp, fontWeight = FontWeight.Bold) }
+
+            Spacer(Modifier.height(20.dp))
+
+            Button(
+                onClick = onLogout,
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .height(60.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+            ) { Text("Đăng xuất", fontSize = 20.sp, color = Color.White) }
+        }
+    }
+}
+
+// ----------------------------- Admin Home Screen -----------------------------
+
+@Composable
+fun AdminHomeScreen(
+    username: String,
+    onLogout: () -> Unit
+) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFFE1BEE7), Color(0xFFFFF8E1)))),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Xin chào, $username 👋", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(40.dp))
+            
+            Text("Trang quản trị", fontSize = 20.sp, color = Color.Gray)
+
+            Spacer(Modifier.height(20.dp))
+
+            Button(
+                onClick = onLogout,
+                modifier = Modifier
+                    .fillMaxWidth(0.7f)
+                    .height(60.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
+            ) { Text("Đăng xuất", fontSize = 20.sp, color = Color.White) }
+        }
     }
 }
