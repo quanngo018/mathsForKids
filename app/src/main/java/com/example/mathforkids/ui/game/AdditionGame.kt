@@ -172,8 +172,9 @@ fun VisualGroup(count: Int, emoji: String) {
 }
 
 fun generateAdditionQuestion(level: Int): GameQuestion.AdditionQuestion {
-    val maxNum = GameConfig.getAdditionMaxForLevel(level)
-    val num1 = Random.nextInt(1, maxNum)
-    val num2 = Random.nextInt(1, maxNum)
+    val maxSum = GameConfig.getAdditionMaxForLevel(level)
+    // Ensure sum <= maxSum
+    val num1 = Random.nextInt(0, maxSum + 1)
+    val num2 = Random.nextInt(0, maxSum - num1 + 1)
     return GameQuestion.AdditionQuestion(num1 = num1, num2 = num2)
 }

@@ -46,7 +46,7 @@ fun CountingGameScreen(
         val opts = mutableSetOf(correct)
         var attempts = 0
         while (opts.size < 3 && attempts < 50) {
-            val randomNum = Random.nextInt(1, 11)
+            val randomNum = Random.nextInt(0, 11)
             if (randomNum != correct) {
                 opts.add(randomNum)
             }
@@ -54,7 +54,7 @@ fun CountingGameScreen(
         }
         // Nếu không đủ 3, thêm các số gần correct
         if (opts.size < 3) {
-            if (correct > 1) opts.add(correct - 1)
+            if (correct > 0) opts.add(correct - 1)
             if (correct < 10 && opts.size < 3) opts.add(correct + 1)
         }
         opts.toList().shuffled()
@@ -172,6 +172,6 @@ fun ObjectsDisplay(count: Int) {
 
 fun generateCountingQuestion(level: Int): GameQuestion.CountingQuestion {
     val maxCount = GameConfig.getCountingMaxForLevel(level)
-    val count = Random.nextInt(1, maxCount + 1)
+    val count = Random.nextInt(0, maxCount + 1)
     return GameQuestion.CountingQuestion(objectCount = count)
 }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,9 +38,12 @@ fun LevelSelectionScreen(
     onLevelClick: (GameType, Int) -> Unit,
     onBack: () -> Unit
 ) {
-    // Generate levels with unlock status based on completed levels
-    val levels = remember(completedLevels) { 
-        generateGameLevels(completedLevels) 
+    var selectedTab by remember { mutableIntStateOf(0) }
+    val tabs = listOf(GameType.COUNTING, GameType.ADDITION)
+
+    // Generate levels based on selected tab
+    val levels = remember(completedLevels, selectedTab) { 
+        generateGameLevels(completedLevels, tabs[selectedTab]) 
     }
     
     Box(
@@ -60,6 +64,34 @@ fun LevelSelectionScreen(
         ) {
             // Header
             LevelSelectionHeader(onBack = onBack)
+
+            // Mode Selection Tabs
+            TabRow(
+                selectedTabIndex = selectedTab,
+                containerColor = Color.Transparent,
+                contentColor = Color(0xFF6A1B9A),
+                indicator = { tabPositions ->
+                    TabRowDefaults.Indicator(
+                        Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
+                        color = Color(0xFF9C27B0),
+                        height = 4.dp
+                    )
+                }
+            ) {
+                tabs.forEachIndexed { index, type ->
+                    Tab(
+                        selected = selectedTab == index,
+                        onClick = { selectedTab = index },
+                        text = { 
+                            Text(
+                                text = type.displayName,
+                                fontSize = 18.sp,
+                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
+                            ) 
+                        }
+                    )
+                }
+            }
             
             // Scrollable path
             Box(
@@ -189,47 +221,40 @@ fun BoxScope.LevelNode(
  * Generate sample game levels in a winding path
  * Unlocks levels based on completed levels
  */
-fun generateGameLevels(completedLevels: Set<Int> = setOf()): List<GameLevel> {
+fun generateGameLevels(completedLevels: Set<Int> = setOf(), gameType: GameType): List<GameLevel> {
     val levels = mutableListOf<GameLevel>()
-    val types = listOf(
-        GameType.COUNTING,
-        GameType.COUNTING,
-        GameType.ADDITION,
-        GameType.ADDITION,
-        GameType.SUBTRACTION,
-        GameType.MATCHING,
-        GameType.COUNTING,
-        GameType.ADDITION,
-        GameType.SUBTRACTION,
-        GameType.MATCHING
-    )
     
-    types.forEachIndexed { index, type ->
+    // Define level count and ID offset based on game type
+    val (levelCount, idOffset) = when (gameType) {
+        GameType.COUNTING -> Pair(11, 1000) // Levels 1001-1011 (Numbers 0-10)
+        GameType.ADDITION -> Pair(20, 2000) // Levels 2001-2020
+        else -> Pair(10, 3000)
+    }
+    
+    for (i in 0 until levelCount) {
         // Create a winding path (left-right-left pattern)
         val xPos = when {
-            index % 3 == 0 -> 0.25f
-            index % 3 == 1 -> 0.5f
+            i % 3 == 0 -> 0.25f
+            i % 3 == 1 -> 0.5f
             else -> 0.75f
         }
         
-        val levelId = index + 1
+        val levelId = idOffset + i + 1
         
-        // Level unlocked nếu:
-        // - Là level 1 (levelId = 1)
-        // - Hoặc level trước đó đã complete (levelId - 1)
-        val isUnlocked = levelId == 1 || completedLevels.contains(levelId - 1)
+        // Level unlocked if it's the first level of the type OR previous level is completed
+        val isUnlocked = i == 0 || completedLevels.contains(levelId - 1)
         val isCompleted = completedLevels.contains(levelId)
         
         levels.add(
             GameLevel(
                 id = levelId,
-                gameType = type,
+                gameType = gameType,
                 isUnlocked = isUnlocked,
                 isCompleted = isCompleted,
-                stars = if (isCompleted) 3 else 0, // Giả sử 3 sao nếu hoàn thành
+                stars = if (isCompleted) 3 else 0,
                 position = LevelPosition(
                     x = xPos,
-                    y = 100f + (index * 120f)
+                    y = 100f + (i * 120f)
                 )
             )
         )

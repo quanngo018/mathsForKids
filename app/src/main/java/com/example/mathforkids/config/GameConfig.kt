@@ -118,9 +118,20 @@ object GameConfig {
      * Lấy số tối đa cho counting game theo level
      */
     fun getCountingMaxForLevel(level: Int): Int {
-        return when (level) {
-            1 -> CountingDifficulty.LEVEL_1_MAX
-            2 -> CountingDifficulty.LEVEL_2_MAX
+        return when {
+            // New Counting Levels (1000+)
+            level >= 1000 -> {
+                val relativeLevel = level - 1000
+                when (relativeLevel) {
+                    1 -> 3  // Level 1: 0-3
+                    2 -> 5  // Level 2: 0-5
+                    3 -> 7  // Level 3: 0-7
+                    else -> 10 // Level 4+: 0-10
+                }
+            }
+            // Legacy Levels
+            level == 1 -> CountingDifficulty.LEVEL_1_MAX
+            level == 2 -> CountingDifficulty.LEVEL_2_MAX
             else -> CountingDifficulty.LEVEL_3_MAX
         }
     }
@@ -129,9 +140,20 @@ object GameConfig {
      * Lấy số tối đa cho addition game theo level
      */
     fun getAdditionMaxForLevel(level: Int): Int {
-        return when (level) {
-            1 -> AdditionDifficulty.LEVEL_1_MAX
-            2 -> AdditionDifficulty.LEVEL_2_MAX
+        return when {
+            // New Addition Levels (2000+)
+            level >= 2000 -> {
+                val relativeLevel = level - 2000
+                when (relativeLevel) {
+                    1 -> 3  // Sum <= 3
+                    2 -> 5  // Sum <= 5
+                    3 -> 7  // Sum <= 7
+                    else -> 10 // Sum <= 10
+                }
+            }
+            // Legacy Levels
+            level == 1 -> AdditionDifficulty.LEVEL_1_MAX
+            level == 2 -> AdditionDifficulty.LEVEL_2_MAX
             else -> AdditionDifficulty.LEVEL_3_MAX
         }
     }
