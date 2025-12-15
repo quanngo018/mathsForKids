@@ -24,6 +24,21 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.random.Random
 
+data class GameIcon(val emoji: String, val name: String)
+
+val availableIcons = listOf(
+    GameIcon("🍎", "quả táo"),
+    GameIcon("⭐", "ngôi sao"),
+    GameIcon("🎈", "bóng bay"),
+    GameIcon("🌟", "ngôi sao lấp lánh"),
+    GameIcon("🍇", "chùm nho"),
+    GameIcon("🎨", "bảng màu"),
+    GameIcon("🐶", "chú chó"),
+    GameIcon("🐱", "chú mèo"),
+    GameIcon("🚗", "ô tô"),
+    GameIcon("🍦", "cây kem")
+)
+
 /**
  * Counting Game - Visual learning with objects
  * Perfect for 4-5 year olds learning to count
@@ -36,6 +51,7 @@ fun CountingGameScreen(
     onBack: () -> Unit
 ) {
     var question by remember { mutableStateOf(generateCountingQuestion(level)) }
+    var currentIcon by remember { mutableStateOf(availableIcons.random()) }
     var selectedAnswer by remember { mutableStateOf<Int?>(null) }
     var showFeedback by remember { mutableStateOf(false) }
     var isCorrect by remember { mutableStateOf(false) }
@@ -71,6 +87,7 @@ fun CountingGameScreen(
                 onCorrect()
                 // Generate new question
                 question = generateCountingQuestion(level)
+                currentIcon = availableIcons.random()
                 selectedAnswer = null
                 showFeedback = false
             } else {
@@ -102,16 +119,20 @@ fun CountingGameScreen(
         
         // Question
         Text(
-            "Có bao nhiêu?",
-            fontSize = 32.sp,
+            "Bé ơi, có bao nhiêu ${currentIcon.name} nhỉ?",
+            fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF2E7D32)
+            color = Color(0xFF2E7D32),
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
         
         Spacer(Modifier.height(30.dp))
         
         // Visual objects to count
-        ObjectsDisplay(count = (question as GameQuestion.CountingQuestion).objectCount)
+        ObjectsDisplay(
+            count = (question as GameQuestion.CountingQuestion).objectCount,
+            emoji = currentIcon.emoji
+        )
         
         Spacer(Modifier.height(40.dp))
         
@@ -137,11 +158,7 @@ fun CountingGameScreen(
 }
 
 @Composable
-fun ObjectsDisplay(count: Int) {
-    // Display visual objects (emojis) for kids to count
-    val emojis = listOf("🍎", "⭐", "🎈", "🌟", "🍇", "🎨")
-    val emoji = emojis.random()
-    
+fun ObjectsDisplay(count: Int, emoji: String) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
