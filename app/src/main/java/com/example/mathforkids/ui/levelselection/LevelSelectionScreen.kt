@@ -28,6 +28,8 @@ import com.example.mathforkids.model.GameLevel
 import com.example.mathforkids.model.GameType
 import com.example.mathforkids.model.LevelPosition
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+
 /**
  * Duolingo-style level selection screen with winding path
  * Designed for 4-5 year old kids with big, colorful buttons
@@ -38,14 +40,8 @@ fun LevelSelectionScreen(
     onLevelClick: (GameType, Int) -> Unit,
     onBack: () -> Unit
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) }
-    val tabs = listOf(GameType.COUNTING, GameType.ADDITION)
+    var selectedGameType by remember { mutableStateOf<GameType?>(null) }
 
-    // Generate levels based on selected tab
-    val levels = remember(completedLevels, selectedTab) { 
-        generateGameLevels(completedLevels, tabs[selectedTab]) 
-    }
-    
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -59,63 +55,130 @@ fun LevelSelectionScreen(
                 )
             )
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            // Header
-            LevelSelectionHeader(onBack = onBack)
+        if (selectedGameType == null) {
+            ModeSelectionView(
+                onModeSelected = { selectedGameType = it },
+                onBack = onBack
+            )
+        } else {
+            LevelMapView(
+                gameType = selectedGameType!!,
+                completedLevels = completedLevels,
+                onLevelClick = onLevelClick,
+                onBack = { selectedGameType = null }
+            )
+        }
+    }
+}
 
-            // Mode Selection Tabs
-            TabRow(
-                selectedTabIndex = selectedTab,
-                containerColor = Color.Transparent,
-                contentColor = Color(0xFF6A1B9A),
-                indicator = { tabPositions ->
-                    TabRowDefaults.Indicator(
-                        Modifier.tabIndicatorOffset(tabPositions[selectedTab]),
-                        color = Color(0xFF9C27B0),
-                        height = 4.dp
-                    )
-                }
-            ) {
-                tabs.forEachIndexed { index, type ->
-                    Tab(
-                        selected = selectedTab == index,
-                        onClick = { selectedTab = index },
-                        text = { 
-                            Text(
-                                text = type.displayName,
-                                fontSize = 18.sp,
-                                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
-                            ) 
-                        }
-                    )
-                }
-            }
+@Composable
+fun ModeSelectionView(
+    onModeSelected: (GameType) -> Unit,
+    onBack: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        LevelSelectionHeader(onBack = onBack, title = "Chọn chế độ")
+        
+        Spacer(modifier = Modifier.height(40.dp))
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            ModeButton(
+                gameType = GameType.COUNTING,
+                onClick = { onModeSelected(GameType.COUNTING) }
+            )
             
-            // Scrollable path
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-            ) {
-                // Draw the winding path
-                DrawPath(levels)
-                
-                // Level nodes on the path
-                levels.forEach { level ->
-                    LevelNode(
-                        level = level,
-                        onClick = { onLevelClick(level.gameType, level.id) }
-                    )
-                }
+            ModeButton(
+                gameType = GameType.ADDITION,
+                onClick = { onModeSelected(GameType.ADDITION) }
+            )
+        }
+    }
+}
+
+@Composable
+fun ModeButton(
+    gameType: GameType,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .width(160.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color.White)
+            .clickable(onClick = onClick)
+            .padding(16.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(100.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(gameType.color.copy(alpha = 0.2f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = gameType.emoji,
+                fontSize = 60.sp
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(16.dp))
+        
+        Text(
+            text = gameType.displayName,
+            fontSize = 20.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF424242)
+        )
+    }
+}
+
+@Composable
+fun LevelMapView(
+    gameType: GameType,
+    completedLevels: Set<Int>,
+    onLevelClick: (GameType, Int) -> Unit,
+    onBack: () -> Unit
+) {
+    // Generate levels based on selected game type
+    val levels = remember(completedLevels, gameType) { 
+        generateGameLevels(completedLevels, gameType) 
+    }
+    
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // Header
+        LevelSelectionHeader(onBack = onBack, title = gameType.displayName)
+        
+        // Scrollable path
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+        ) {
+            // Draw the winding path
+            DrawPath(levels)
+            
+            // Level nodes on the path
+            levels.forEach { level ->
+                LevelNode(
+                    level = level,
+                    onClick = { onLevelClick(level.gameType, level.id) }
+                )
             }
         }
     }
 }
 
 @Composable
-fun LevelSelectionHeader(onBack: () -> Unit) {
+fun LevelSelectionHeader(onBack: () -> Unit, title: String = "🎮 Chọn bài học") {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -126,11 +189,11 @@ fun LevelSelectionHeader(onBack: () -> Unit) {
             onClick = onBack,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0))
         ) {
-            Text("⬅ Menu", fontSize = 18.sp, color = Color.White)
+            Text("⬅", fontSize = 18.sp, color = Color.White)
         }
         Spacer(Modifier.width(16.dp))
         Text(
-            "🎮 Chọn bài học",
+            title,
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             color = Color(0xFF6A1B9A)
