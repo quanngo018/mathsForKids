@@ -37,10 +37,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 @Composable
 fun LevelSelectionScreen(
     completedLevels: Set<Int>,
+    initialGameType: GameType? = null,
     onLevelClick: (GameType, Int) -> Unit,
     onBack: () -> Unit
 ) {
-    var selectedGameType by remember { mutableStateOf<GameType?>(null) }
+    var selectedGameType by remember { mutableStateOf(initialGameType) }
+
+    // Update selectedGameType if initialGameType changes (e.g. when navigating back)
+    LaunchedEffect(initialGameType) {
+        if (initialGameType != null) {
+            selectedGameType = initialGameType
+        }
+    }
 
     Box(
         modifier = Modifier

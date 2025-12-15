@@ -139,15 +139,43 @@ fun AppNavigator() {
         }
 
         // ---------------- Level Selection ----------------
-        composable(Screen.LevelSelection.route) {
+        composable(
+            route = "${Screen.LevelSelection.route}?gameType={gameType}",
+            arguments = listOf(
+                navArgument("gameType") { 
+                    type = NavType.StringType 
+                    nullable = true
+                }
+            )
+        ) { backStackEntry ->
+            val gameTypeStr = backStackEntry.arguments?.getString("gameType")
+            val initialGameType = if (gameTypeStr != null) {
+                try {
+                    com.example.mathforkids.model.GameType.valueOf(gameTypeStr)
+                } catch (e: Exception) {
+                    null
+                }
+            } else null
+
             LevelSelectionScreen(
                 completedLevels = completedLevels.toSet(),
+                initialGameType = initialGameType,
                 onLevelClick = { gameType, level ->
                     navController.navigate(
                         Screen.Game.createRoute(gameType.name, level)
                     )
                 },
-                onBack = { navController.popBackStack() }
+                onBack = { 
+                    if (initialGameType != null) {
+                        // If we came here with a specific game type (e.g. from game completion),
+                        // go back to main menu instead of mode selection
+                        navController.navigate(Screen.Menu.route) {
+                            popUpTo(Screen.Menu.route) { inclusive = true }
+                        }
+                    } else {
+                        navController.popBackStack() 
+                    }
+                }
             )
         }
 
@@ -168,7 +196,10 @@ fun AppNavigator() {
                 onComplete = {
                     // Mark current level as completed
                     completedLevels.add(level)
-                    navController.popBackStack()
+                    // Navigate back to LevelSelection with the same game type to show map
+                    navController.navigate("${Screen.LevelSelection.route}?gameType=$gameType") {
+                        popUpTo(Screen.LevelSelection.route) { inclusive = true }
+                    }
                 },
                 onBack = { navController.popBackStack() }
             )

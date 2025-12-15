@@ -122,12 +122,8 @@ fun LevelCompletionDialog(
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(24.dp))
-                .background(
-                    androidx.compose.ui.graphics.Brush.verticalGradient(
-                        listOf(Color(0xFFFFD54F), Color(0xFFFFB300))
-                    )
-                )
-                .padding(32.dp),
+                .background(Color.White)
+                .padding(24.dp),
             contentAlignment = Alignment.Center
         ) {
             Column(
@@ -135,10 +131,10 @@ fun LevelCompletionDialog(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    "🎊 HOÀN THÀNH! 🎊",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White
+                    "Hoàn thành!",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF4CAF50)
                 )
 
                 Spacer(Modifier.height(16.dp))
@@ -146,31 +142,8 @@ fun LevelCompletionDialog(
                 // Stars
                 Text(
                     "⭐".repeat(stars),
-                    fontSize = 48.sp
+                    fontSize = 40.sp
                 )
-
-                Spacer(Modifier.height(24.dp))
-
-                // Stats
-                Card(
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color.White.copy(alpha = 0.9f)
-                    )
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            "Kết quả:",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text("✅ Đúng: $correctAnswers", fontSize = 16.sp)
-                        Text("❌ Sai: $incorrectAnswers", fontSize = 16.sp)
-                    }
-                }
 
                 Spacer(Modifier.height(24.dp))
 
@@ -179,15 +152,15 @@ fun LevelCompletionDialog(
                     onClick = onContinue,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(56.dp),
+                        .height(50.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF4CAF50)
                     ),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        "➡️ Level tiếp theo",
-                        fontSize = 20.sp,
+                        "Tiếp tục",
+                        fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
                 }
@@ -199,21 +172,9 @@ fun LevelCompletionDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("🔄 Chơi lại", fontSize = 18.sp)
-                }
-                
-                Spacer(Modifier.height(8.dp))
-                
-                TextButton(
-                    onClick = onBack,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("⬅ Quay lại", fontSize = 16.sp, color = Color.White)
+                    Text("Chơi lại", fontSize = 16.sp)
                 }
             }
         }
