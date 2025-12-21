@@ -365,7 +365,7 @@ fun RegisterScreen(onRegister: (String, String, String) -> Unit, onBack: () -> U
     ) {
 
         Image(
-            painter = painterResource(id = R.drawable.bg_dangky),
+            painter = painterResource(id = R.drawable.bg_dangkyv2 ),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop
