@@ -40,6 +40,7 @@ fun GameScreen(
         "ADDITION" -> GameType.ADDITION
         "SUBTRACTION" -> GameType.SUBTRACTION
         "MATCHING" -> GameType.MATCHING
+        "WRITING" -> GameType.WRITING
         else -> GameType.COUNTING
     }
     
@@ -72,6 +73,12 @@ fun GameScreen(
                 onBack = onBack
             )
             GameType.MATCHING -> MatchingGameScreen(
+                level = level,
+                onCorrect = { correctCount++ },
+                onIncorrect = { incorrectCount++ },
+                onBack = onBack
+            )
+            GameType.WRITING -> WritingPracticeGameScreen(
                 level = level,
                 onCorrect = { correctCount++ },
                 onIncorrect = { incorrectCount++ },

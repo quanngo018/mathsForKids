@@ -9,7 +9,8 @@ enum class GameType(val displayName: String, val emoji: String, val color: Color
     COUNTING("Đếm số", "🔢", Color(0xFF4CAF50)),
     ADDITION("Cộng", "➕", Color(0xFF2196F3)),
     SUBTRACTION("Trừ", "➖", Color(0xFFFFC107)),
-    MATCHING("Ghép số", "🎯", Color(0xFFE91E63))
+    MATCHING("Ghép số", "🎯", Color(0xFFE91E63)),
+    WRITING("Bé tập viết", "✏️", Color(0xFFFF9800))
 }
 
 /**
@@ -68,5 +69,10 @@ sealed class GameQuestion {
     data class MatchingQuestion(
         val number: Int,
         override val correctAnswer: Int = number
+    ) : GameQuestion()
+    
+    data class WritingQuestion(
+        val targetDigit: Int,
+        override val correctAnswer: Int = targetDigit
     ) : GameQuestion()
 }

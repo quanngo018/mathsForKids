@@ -33,6 +33,11 @@ android {
 
         // Use support library for vector drawables
         vectorDrawables.useSupportLibrary = true
+        
+        // TensorFlow Lite options
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
     }
 
     buildTypes {
@@ -66,10 +71,20 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.13"
     }
+    
+    // Configure assets and ML model options
+    androidResources {
+        noCompress += "tflite"
+    }
 
     // Remove unnecessary license files from packaging
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        
+        // Support for 16 KB page sizes (Android 15+)
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
 }
 
@@ -88,6 +103,9 @@ dependencies {
 
     // --- Navigation ---
     implementation("androidx.navigation:navigation-compose:2.7.7")
+
+    // --- TensorFlow Lite for MNIST ---
+    implementation("org.tensorflow:tensorflow-lite:2.17.0")
 
     // --- Testing ---
     testImplementation("junit:junit:4.13.2")

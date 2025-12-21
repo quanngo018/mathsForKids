@@ -68,6 +68,9 @@ fun LevelSelectionScreen(
                 onModeSelected = { selectedGameType = it },
                 onBack = onBack
             )
+        } else if (selectedGameType == GameType.WRITING) {
+            // WRITING game doesn't use level selection - go directly to digit selection
+            onLevelClick(GameType.WRITING, 1)
         } else {
             LevelMapView(
                 gameType = selectedGameType!!,
@@ -104,6 +107,18 @@ fun ModeSelectionView(
             ModeButton(
                 gameType = GameType.ADDITION,
                 onClick = { onModeSelected(GameType.ADDITION) }
+            )
+        }
+        
+        Spacer(modifier = Modifier.height(20.dp))
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            ModeButton(
+                gameType = GameType.WRITING,
+                onClick = { onModeSelected(GameType.WRITING) }
             )
         }
     }
@@ -278,7 +293,7 @@ fun BoxScope.LevelNode(
             )
             if (level.isCompleted) {
                 Text(
-                    text = "⭐".repeat(level.stars),
+                    text = "⭐⭐⭐".repeat(level.stars),
                     fontSize = 12.sp
                 )
             } else if (!level.isUnlocked) {
@@ -299,6 +314,7 @@ fun generateGameLevels(completedLevels: Set<Int> = setOf(), gameType: GameType):
     val (levelCount, idOffset) = when (gameType) {
         GameType.COUNTING -> Pair(11, 1000) // Levels 1001-1011 (Numbers 0-10)
         GameType.ADDITION -> Pair(20, 2000) // Levels 2001-2020
+        GameType.WRITING -> Pair(10, 4000) // Levels 4001-4010 (Digits 0-9)
         else -> Pair(10, 3000)
     }
     
