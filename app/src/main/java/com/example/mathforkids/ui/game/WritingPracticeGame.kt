@@ -7,8 +7,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -51,8 +53,11 @@ fun WritingPracticeGameScreen(
             targetDigit = selectedDigit!!,
             onCorrect = onCorrect,
             onIncorrect = onIncorrect,
-            onBack = { selectedDigit = null },
-            onNewDigit = { selectedDigit = null }
+            onBack = onBack,
+            onNewDigit = { selectedDigit = null },
+            onNextDigit = { 
+                selectedDigit = if (selectedDigit!! < 9) selectedDigit!! + 1 else 0
+            }
         )
     }
 }
@@ -68,7 +73,11 @@ fun DigitSelectionScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color(0xFFFFF3E0), Color(0xFFFFE0B2))
+                )
+            )
             .padding(16.dp)
     ) {
         Column(
@@ -200,21 +209,22 @@ fun WritingPracticeScreen(
     onCorrect: () -> Unit,
     onIncorrect: () -> Unit,
     onBack: () -> Unit,
-    onNewDigit: () -> Unit
+    onNewDigit: () -> Unit,
+    onNextDigit: () -> Unit
 ) {
     val context = LocalContext.current
     val classifier = remember { MnistClassifier(context) }
     
     // Drawing state
-    var paths by remember { mutableStateOf(listOf<DrawPath>()) }
-    var currentPath by remember { mutableStateOf(Path()) }
-    var isDrawing by remember { mutableStateOf(false) }
+    var paths by remember(targetDigit) { mutableStateOf(listOf<DrawPath>()) }
+    var currentPath by remember(targetDigit) { mutableStateOf(Path()) }
+    var isDrawing by remember(targetDigit) { mutableStateOf(false) }
     
     // Feedback state
-    var showFeedback by remember { mutableStateOf(false) }
-    var isCorrectAnswer by remember { mutableStateOf(false) }
-    var predictedDigit by remember { mutableStateOf(-1) }
-    var confidence by remember { mutableStateOf(0f) }
+    var showFeedback by remember(targetDigit) { mutableStateOf(false) }
+    var isCorrectAnswer by remember(targetDigit) { mutableStateOf(false) }
+    var predictedDigit by remember(targetDigit) { mutableStateOf(-1) }
+    var confidence by remember(targetDigit) { mutableStateOf(0f) }
     
     // Cleanup classifier on dispose
     DisposableEffect(Unit) {
@@ -235,7 +245,7 @@ fun WritingPracticeScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(16.dp),
+                .padding(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Header
@@ -244,69 +254,34 @@ fun WritingPracticeScreen(
                 onBack = onBack
             )
             
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             
-            // Instructions
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(4.dp),
-                shape = RoundedCornerShape(16.dp)
+            // Target digit - simple display without card
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        "Hãy viết số:",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFF424242)
-                    )
-                    
-                    Spacer(modifier = Modifier.height(8.dp))
-                    
-                    // Target digit with animation
-                    val scale by rememberInfiniteTransition(label = "scale").animateFloat(
-                        initialValue = 1f,
-                        targetValue = 1.2f,
-                        animationSpec = infiniteRepeatable(
-                            animation = tween(800, easing = EaseInOut),
-                            repeatMode = RepeatMode.Reverse
-                        ),
-                        label = "scale"
-                    )
-                    
-                    Text(
-                        text = targetDigit.toString(),
-                        fontSize = 80.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFFF9800),
-                        modifier = Modifier.graphicsLayer {
-                            scaleX = scale
-                            scaleY = scale
-                        }
-                    )
-                }
+                Text(
+                    "Hãy viết số: ",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF424242)
+                )
+                Text(
+                    text = targetDigit.toString(),
+                    fontSize = 48.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFFF9800)
+                )
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // Drawing Canvas
-            Text(
-                "Viết số vào ô dưới đây:",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFF424242)
-            )
-            
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(1f)
-                    .clip(RoundedCornerShape(16.dp))
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
                     .background(Color.White)
             ) {
                 Canvas(
@@ -367,7 +342,7 @@ fun WritingPracticeScreen(
                 }
             }
             
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(8.dp))
             
             // Action buttons
             Row(
@@ -384,12 +359,13 @@ fun WritingPracticeScreen(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFFE0E0E0)
                     ),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f)
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(8.dp)
                 ) {
                     Text(
                         "🗑️ Xóa",
-                        fontSize = 18.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF424242)
                     )
@@ -424,13 +400,14 @@ fun WritingPracticeScreen(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = Color(0xFF4CAF50)
                     ),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(8.dp),
                     modifier = Modifier.weight(1f),
-                    enabled = paths.isNotEmpty()
+                    enabled = paths.isNotEmpty(),
+                    contentPadding = PaddingValues(8.dp)
                 ) {
                     Text(
                         "✓ Kiểm tra",
-                        fontSize = 18.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
@@ -440,62 +417,119 @@ fun WritingPracticeScreen(
             // Feedback
             AnimatedVisibility(
                 visible = showFeedback,
-                enter = fadeIn() + slideInVertically(),
-                exit = fadeOut() + slideOutVertically()
+                enter = fadeIn(),
+                exit = fadeOut()
             ) {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 16.dp),
+                        .padding(top = 4.dp),
                     colors = CardDefaults.cardColors(
                         containerColor = if (isCorrectAnswer) Color(0xFFC8E6C9) else Color(0xFFFFCDD2)
                     ),
-                    shape = RoundedCornerShape(16.dp)
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(
-                        modifier = Modifier.padding(16.dp),
+                        modifier = Modifier.padding(8.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
                             text = if (isCorrectAnswer) "🎉 Đúng rồi!" else "😊 Thử lại nhé!",
-                            fontSize = 24.sp,
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isCorrectAnswer) Color(0xFF2E7D32) else Color(0xFFC62828)
                         )
-                        
-                        Spacer(modifier = Modifier.height(8.dp))
-                        
-                        Text(
-                            text = "Bé viết số: $predictedDigit (${(confidence * 100).toInt()}%)",
-                            fontSize = 16.sp,
-                            color = Color(0xFF424242)
-                        )
+
                         
                         if (isCorrectAnswer) {
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
+                            
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                // Row 1: Vẽ tiếp and Vẽ lại
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+                                ) {
+                                    // Button to continue to next digit
+                                    Button(
+                                        onClick = onNextDigit,
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFF4CAF50)
+                                        ),
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(
+                                            "Vẽ tiếp ➡️",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    
+                                    // Button to try same digit again
+                                    Button(
+                                        onClick = {
+                                            paths = emptyList()
+                                            showFeedback = false
+                                        },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFF2196F3)
+                                        ),
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(
+                                            "Vẽ lại 🔄",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    
+                                    // Button to go back
+                                    Button(
+                                        onClick = onNewDigit,
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = Color(0xFFFF9800)
+                                        ),
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(
+                                            "⬅️ Quay lại",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            // Show 2 buttons for incorrect answer: "Quay lại" and "Vẽ lại"
+                            Spacer(modifier = Modifier.height(6.dp))
                             
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                // Button to choose another digit
+                                // Button to go back to digit selection
                                 Button(
-                                    onClick = {
-                                        onCorrect()
-                                        onNewDigit()
-                                    },
+                                    onClick = onNewDigit,
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = Color(0xFF4CAF50)
+                                        containerColor = Color(0xFFFF9800)
                                     ),
-                                    shape = RoundedCornerShape(12.dp)
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                                 ) {
                                     Text(
-                                        "Chọn số khác ✨",
-                                        fontSize = 16.sp,
+                                        "⬅️ Quay lại",
+                                        fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
                                 
-                                // Button to try same digit again
+                                // Button to try again
                                 Button(
                                     onClick = {
                                         paths = emptyList()
@@ -504,34 +538,15 @@ fun WritingPracticeScreen(
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = Color(0xFF2196F3)
                                     ),
-                                    shape = RoundedCornerShape(12.dp)
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                                 ) {
                                     Text(
-                                        "Viết lại 🔄",
-                                        fontSize = 16.sp,
+                                        "Vẽ lại 🔄",
+                                        fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
-                            }
-                        } else {
-                            // Show try again button for incorrect answer
-                            Spacer(modifier = Modifier.height(12.dp))
-                            
-                            Button(
-                                onClick = {
-                                    paths = emptyList()
-                                    showFeedback = false
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color(0xFFFF9800)
-                                ),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text(
-                                    "Thử lại 🔄",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
                             }
                         }
                     }
