@@ -44,9 +44,9 @@ fun GameScreen(
         else -> GameType.COUNTING
     }
     
-    // Check if level is completed
+    // Check if level is completed (not for WRITING mode - it's free practice)
     LaunchedEffect(correctCount) {
-        if (GameConfig.canUnlockNextLevel(correctCount) && !showCompletionDialog) {
+        if (type != GameType.WRITING && GameConfig.canUnlockNextLevel(correctCount) && !showCompletionDialog) {
             showCompletionDialog = true
         }
     }
@@ -80,8 +80,8 @@ fun GameScreen(
             )
             GameType.WRITING -> WritingPracticeGameScreen(
                 level = level,
-                onCorrect = { correctCount++ },
-                onIncorrect = { incorrectCount++ },
+                onCorrect = { /* No tracking for free practice mode */ },
+                onIncorrect = { /* No tracking for free practice mode */ },
                 onBack = onBack
             )
         }

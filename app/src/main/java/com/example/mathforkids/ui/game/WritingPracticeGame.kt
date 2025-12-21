@@ -287,7 +287,7 @@ fun WritingPracticeScreen(
                 Canvas(
                     modifier = Modifier
                         .fillMaxSize()
-                        .pointerInput(Unit) {
+                        .pointerInput(targetDigit) {
                             detectDragGestures(
                                 onDragStart = { offset ->
                                     isDrawing = true
