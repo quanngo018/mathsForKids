@@ -430,29 +430,29 @@ fun WritingPracticeScreen(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Column(
-                        modifier = Modifier.padding(8.dp),
+                        modifier = Modifier.padding(12.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
                         Text(
                             text = if (isCorrectAnswer) "🎉 Đúng rồi!" else "😊 Thử lại nhé!",
-                            fontSize = 18.sp,
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isCorrectAnswer) Color(0xFF2E7D32) else Color(0xFFC62828)
                         )
 
                         
                         if (isCorrectAnswer) {
-                            Spacer(modifier = Modifier.height(6.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 // Row 1: Vẽ tiếp and Vẽ lại
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
                                 ) {
                                     // Button to continue to next digit
                                     Button(
@@ -461,11 +461,11 @@ fun WritingPracticeScreen(
                                             containerColor = Color(0xFF4CAF50)
                                         ),
                                         shape = RoundedCornerShape(8.dp),
-                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                                     ) {
                                         Text(
                                             "Vẽ tiếp ➡️",
-                                            fontSize = 14.sp,
+                                            fontSize = 16.sp,
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
@@ -480,27 +480,27 @@ fun WritingPracticeScreen(
                                             containerColor = Color(0xFF2196F3)
                                         ),
                                         shape = RoundedCornerShape(8.dp),
-                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                                     ) {
                                         Text(
                                             "Vẽ lại 🔄",
-                                            fontSize = 14.sp,
+                                            fontSize = 16.sp,
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
                                     
                                     // Button to go back
                                     Button(
-                                        onClick = onNewDigit,
+                                        onClick = onBack,
                                         colors = ButtonDefaults.buttonColors(
                                             containerColor = Color(0xFFFF9800)
                                         ),
                                         shape = RoundedCornerShape(8.dp),
-                                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                                     ) {
                                         Text(
                                             "⬅️ Quay lại",
-                                            fontSize = 14.sp,
+                                            fontSize = 16.sp,
                                             fontWeight = FontWeight.Bold
                                         )
                                     }
@@ -508,23 +508,24 @@ fun WritingPracticeScreen(
                             }
                         } else {
                             // Show 2 buttons for incorrect answer: "Quay lại" and "Vẽ lại"
-                            Spacer(modifier = Modifier.height(6.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                             
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterHorizontally)
                             ) {
-                                // Button to go back to digit selection
+                                // Button to go back to menu
                                 Button(
-                                    onClick = onNewDigit,
+                                    onClick = onBack,
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = Color(0xFFFF9800)
                                     ),
                                     shape = RoundedCornerShape(8.dp),
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                                 ) {
                                     Text(
                                         "⬅️ Quay lại",
-                                        fontSize = 14.sp,
+                                        fontSize = 16.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -539,11 +540,11 @@ fun WritingPracticeScreen(
                                         containerColor = Color(0xFF2196F3)
                                     ),
                                     shape = RoundedCornerShape(8.dp),
-                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                                 ) {
                                     Text(
                                         "Vẽ lại 🔄",
-                                        fontSize = 14.sp,
+                                        fontSize = 16.sp,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
