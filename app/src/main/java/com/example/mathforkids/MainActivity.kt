@@ -649,7 +649,7 @@ fun StudentHomeScreen(
                     .fillMaxWidth(0.7f)
                     .height(70.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
-            ) { Text("✏️ Kiểm tra", fontSize = 24.sp, fontWeight = FontWeight.Bold) }
+            ) { Text("✏️ Học tập", fontSize = 24.sp, fontWeight = FontWeight.Bold) }
 
             Spacer(Modifier.height(20.dp))
 
