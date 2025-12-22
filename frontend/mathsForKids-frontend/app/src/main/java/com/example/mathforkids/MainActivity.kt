@@ -6,7 +6,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -59,7 +58,27 @@ fun AppNavigator() {
     var currentUserId by remember { mutableStateOf(0) }
     var currentUserName by remember { mutableStateOf("") }
     var dashboardUserId by remember { mutableStateOf(0) }
-    val completedLevels = remember { mutableSetOf<Int>() }
+
+    // Set lưu trữ các level đã hoàn thành để vẽ Map
+    val completedLevels = remember { mutableStateListOf<Int>() }
+
+    // [MỚI] Tự động tải tiến độ từ Server mỗi khi User đăng nhập thành công
+    LaunchedEffect(currentUserId) {
+        if (currentUserId != 0) {
+            ApiService.create().getDashboard(currentUserId).enqueue(object : Callback<BaseResponse<DashboardData>> {
+                override fun onResponse(call: Call<BaseResponse<DashboardData>>, response: Response<BaseResponse<DashboardData>>) {
+                    if (response.body()?.status == "success") {
+                        val levels = response.body()?.data?.completedLevels
+                        if (levels != null) {
+                            completedLevels.clear()
+                            completedLevels.addAll(levels)
+                        }
+                    }
+                }
+                override fun onFailure(call: Call<BaseResponse<DashboardData>>, t: Throwable) { /* Ignore error silently */ }
+            })
+        }
+    }
 
     NavHost(navController = navController, startDestination = Screen.Login.route) {
 
@@ -171,7 +190,7 @@ fun AppNavigator() {
             )
         }
 
-        // --- GAME SCREEN (LOGIC SỬA LỖI ĐIỀU HƯỚNG Ở ĐÂY) ---
+        // --- GAME SCREEN (ĐÃ FIX LỖI API SAVE RESULT) ---
         composable(
             route = Screen.Game.route,
             arguments = listOf(navArgument("gameType") { type = NavType.StringType }, navArgument("level") { type = NavType.IntType })
@@ -183,11 +202,25 @@ fun AppNavigator() {
                 gameType = gameType,
                 level = level,
                 onComplete = { result ->
-                    completedLevels.add(level)
-                    // Lưu điểm
+                    // Thêm vào list local để mở khoá ngay lập tức
+                    if (!completedLevels.contains(level)) {
+                        completedLevels.add(level)
+                    }
+
+                    // Lưu điểm lên Server (FIX QUAN TRỌNG Ở ĐÂY)
                     if (currentUserId != 0) {
                         val score = if (result.totalQuestions > 0) (result.correctAnswers.toFloat() / result.totalQuestions) * 10 else 0f
-                        val req = GameResultRequest(currentUserId, score, result.correctAnswers, result.totalQuestions)
+
+                        // [FIXED] Đã thêm gameType và level vào Request
+                        val req = GameResultRequest(
+                            userId = currentUserId,
+                            gameType = gameType,
+                            levelId = level,
+                            score = score,
+                            correctCount = result.correctAnswers,
+                            totalQuestions = result.totalQuestions
+                        )
+
                         ApiService.create().saveResult(req).enqueue(object : Callback<BaseResponse<Any>> {
                             override fun onResponse(call: Call<BaseResponse<Any>>, response: Response<BaseResponse<Any>>) {}
                             override fun onFailure(call: Call<BaseResponse<Any>>, t: Throwable) {
@@ -196,14 +229,12 @@ fun AppNavigator() {
                         })
                     }
 
-                    // [QUAN TRỌNG] FIX LỖI ĐƠ:
-                    // Nếu là game WRITING -> Quay về Menu chọn chế độ (LevelSelection không tham số)
+                    // Điều hướng
                     if (gameType == "WRITING") {
                         navController.navigate(Screen.LevelSelection.route) {
                             popUpTo(Screen.LevelSelection.route) { inclusive = true }
                         }
                     } else {
-                        // Game khác -> Quay về Map Level
                         navController.navigate("${Screen.LevelSelection.route}?gameType=$gameType") {
                             popUpTo(Screen.LevelSelection.route) { inclusive = true }
                         }
@@ -218,8 +249,7 @@ fun AppNavigator() {
     }
 }
 
-// ----------------------------- DASHBOARD SCREEN (GIAO DIỆN MỚI ĐẸP) -----------------------------
-// Dữ liệu giả lập cho từng môn học
+// ----------------------------- DASHBOARD SCREEN -----------------------------
 data class SubjectStat(val name: String, val score: Float, val color: Color, val icon: String)
 
 @Composable
@@ -229,7 +259,6 @@ fun DashboardScreen(userId: Int, onBack: () -> Unit) {
     var averageScore by remember { mutableStateOf(0f) }
     var isLoading by remember { mutableStateOf(true) }
 
-    // Dữ liệu môn học (Giả lập để hiển thị đẹp)
     val subjects = remember(totalCorrect) {
         if (totalQuestions == 0) emptyList() else listOf(
             SubjectStat("Đếm số", 9.5f, Color(0xFF4CAF50), "🔢"),

@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,12 +20,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mathforkids.model.GameLevel
 import com.example.mathforkids.model.GameType
 import com.example.mathforkids.model.LevelPosition
-import androidx.compose.foundation.shape.RoundedCornerShape
 
 /**
  * Màn hình chọn chế độ chơi (Menu) và Bản đồ màn chơi (Map)
@@ -58,16 +59,12 @@ fun LevelSelectionScreen(
             // 1. Nếu chưa chọn game -> Hiện Menu chọn chế độ
             ModeSelectionView(
                 onModeSelected = { selectedGameType = it },
+                onLevelClick = onLevelClick, // Truyền hàm này vào để xử lý game Tập viết
                 onBack = onBack
             )
-        } else if (selectedGameType == GameType.WRITING) {
-            // 2. Nếu chọn Tập viết -> Vào thẳng game (vì game này có màn chọn số riêng)
-            // Reset lại state để khi back ra không bị kẹt
-            SideEffect {
-                onLevelClick(GameType.WRITING, 1)
-            }
         } else {
-            // 3. Các game khác -> Hiện bản đồ Level (Map)
+            // 2. Các game khác -> Hiện bản đồ Level (Map)
+            // Lưu ý: Game WRITING sẽ không bao giờ vào đây vì đã được xử lý ở ModeSelectionView
             LevelMapView(
                 gameType = selectedGameType!!,
                 completedLevels = completedLevels,
@@ -81,6 +78,7 @@ fun LevelSelectionScreen(
 @Composable
 fun ModeSelectionView(
     onModeSelected: (GameType) -> Unit,
+    onLevelClick: (GameType, Int) -> Unit, // [FIX] Thêm tham số này
     onBack: () -> Unit
 ) {
     Column(
@@ -121,7 +119,10 @@ fun ModeSelectionView(
 
             ModeButton(
                 gameType = GameType.WRITING,
-                onClick = { onModeSelected(GameType.WRITING) }
+                onClick = {
+                    // [FIX] Vào thẳng game Tập viết level 1, không cần qua Map
+                    onLevelClick(GameType.WRITING, 1)
+                }
             )
         }
     }
@@ -180,17 +181,21 @@ fun LevelMapView(
     Column(modifier = Modifier.fillMaxSize()) {
         LevelSelectionHeader(onBack = onBack, title = gameType.displayName)
 
-        Box(
+        // [FIX] Dùng BoxWithConstraints để lấy chiều rộng màn hình thực tế
+        BoxWithConstraints(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            DrawPath(levels) // Vẽ đường nối
+            val screenWidth = maxWidth // Chiều rộng màn hình
+
+            DrawPath(levels, screenWidth) // Vẽ đường nối
 
             // Vẽ các nút level
             levels.forEach { level ->
                 LevelNode(
                     level = level,
+                    screenWidth = screenWidth,
                     onClick = { onLevelClick(level.gameType, level.id) }
                 )
             }
@@ -216,13 +221,14 @@ fun LevelSelectionHeader(onBack: () -> Unit, title: String) {
 }
 
 @Composable
-fun BoxScope.DrawPath(levels: List<GameLevel>) {
+fun DrawPath(levels: List<GameLevel>, screenWidth: Dp) {
     Canvas(modifier = Modifier.fillMaxWidth().height(((levels.size * 120)).dp)) {
         val path = Path()
         var isFirst = true
 
         levels.forEach { level ->
-            val x = size.width * level.position.x
+            // [FIX] Tính toạ độ X dựa trên chiều rộng màn hình
+            val x = screenWidth.toPx() * level.position.x
             val y = level.position.y.dp.toPx()
 
             if (isFirst) {
@@ -238,7 +244,7 @@ fun BoxScope.DrawPath(levels: List<GameLevel>) {
 }
 
 @Composable
-fun BoxScope.LevelNode(level: GameLevel, onClick: () -> Unit) {
+fun LevelNode(level: GameLevel, screenWidth: Dp, onClick: () -> Unit) {
     val scale by rememberInfiniteTransition(label = "scale").animateFloat(
         initialValue = 1f,
         targetValue = if (level.isUnlocked && !level.isCompleted) 1.1f else 1f,
@@ -248,7 +254,8 @@ fun BoxScope.LevelNode(level: GameLevel, onClick: () -> Unit) {
 
     Box(
         modifier = Modifier
-            .offset(x = (level.position.x * 300).dp, y = level.position.y.dp)
+            // [FIX] Căn giữa node: (Vị trí % * Chiều rộng) - (Một nửa kích thước Node)
+            .offset(x = (screenWidth * level.position.x) - 40.dp, y = level.position.y.dp)
             .size(80.dp)
             .scale(if (level.isUnlocked) scale else 1f)
             .clip(CircleShape)
