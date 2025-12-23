@@ -7,9 +7,6 @@
   <a href="https://developer.android.com/studio" target="_blank">
     <img src="https://skillicons.dev/icons?i=androidstudio" alt="Android Studio"/>
   </a>
-  <a href="https://developer.android.com/jetpack/compose" target="_blank">
-    <img src="https://skillicons.dev/icons?i=jetpackcompose" alt="Jetpack Compose"/>
-  </a>
   <a href="https://www.python.org" target="_blank">
     <img src="https://skillicons.dev/icons?i=python" alt="Python"/>
   </a>
