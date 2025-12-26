@@ -17,5 +17,6 @@ sealed class Screen(val route: String) {
         fun createRoute(gameType: String, level: Int) = "game/$gameType/$level"
     }
     object Dashboard : Screen("dashboard")
+    object Settings : Screen("settings")
     object TTSTest : Screen("tts_test")
 }

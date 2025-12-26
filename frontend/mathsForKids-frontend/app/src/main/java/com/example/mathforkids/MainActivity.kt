@@ -146,6 +146,7 @@ fun AppNavigator() {
                     dashboardUserId = currentUserId
                     navController.navigate(Screen.Dashboard.route)
                 },
+                onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
                 onLogout = {
                     currentUserId = 0
                     navController.navigate(Screen.Login.route) { popUpTo(Screen.StudentHome.route) { inclusive = true } }
@@ -261,6 +262,21 @@ fun AppNavigator() {
         }
         composable(Screen.AdminHome.route) {
             AdminHomeScreen(username = currentUserName, onLogout = { navController.navigate(Screen.Login.route) })
+        }
+        
+        // --- SETTINGS SCREEN ---
+        composable(Screen.Settings.route) {
+            com.example.mathforkids.ui.settings.SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onNavigateToTTSTest = { navController.navigate(Screen.TTSTest.route) }
+            )
+        }
+        
+        // --- TTS TEST SCREEN ---
+        composable(Screen.TTSTest.route) {
+            com.example.mathforkids.ui.test.TTSTestScreen(
+                onBack = { navController.popBackStack() }
+            )
         }
     }
 }
@@ -557,6 +573,7 @@ fun StudentHomeScreen(
     username: String,
     onNavigateToLuyenTap: () -> Unit,
     onNavigateToDashboard: () -> Unit,
+    onNavigateToSettings: (() -> Unit)? = null,
     onLogout: () -> Unit
 ) {
     val context = LocalContext.current
@@ -611,7 +628,20 @@ fun StudentHomeScreen(
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800)),
                 shape = RoundedCornerShape(50.dp)
             ) {
-                Text("🎥 Dạy học", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("🎥 Học tập", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            }
+
+            // Button Cài đặt
+            if (onNavigateToSettings != null) {
+                Spacer(Modifier.height(20.dp))
+                Button(
+                    onClick = onNavigateToSettings,
+                    modifier = Modifier.fillMaxWidth(0.7f).height(70.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0)),
+                    shape = RoundedCornerShape(50.dp)
+                ) {
+                    Text("⚙️ Cài đặt", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
             }
 
             Spacer(Modifier.height(20.dp))
@@ -630,6 +660,14 @@ fun StudentHomeScreen(
 
 
 
-@Composable fun MainMenuScreen(username: String, onNavigateToMath: () -> Unit, onNavigateToDashboard: () -> Unit, onLogout: () -> Unit) { StudentHomeScreen(username, onNavigateToMath, onNavigateToDashboard, onLogout) }
+@Composable fun MainMenuScreen(username: String, onNavigateToMath: () -> Unit, onNavigateToDashboard: () -> Unit, onLogout: () -> Unit) { 
+    StudentHomeScreen(
+        username = username, 
+        onNavigateToLuyenTap = onNavigateToMath, 
+        onNavigateToDashboard = onNavigateToDashboard, 
+        onNavigateToSettings = null,
+        onLogout = onLogout
+    ) 
+}
 @Composable fun TeacherHomeScreen(username: String, onLogout: () -> Unit) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Column { Text("Giáo viên: $username"); Button(onClick = onLogout) { Text("Đăng xuất") } } } }
 @Composable fun AdminHomeScreen(username: String, onLogout: () -> Unit) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Column { Text("Admin: $username"); Button(onClick = onLogout) { Text("Đăng xuất") } } } }
