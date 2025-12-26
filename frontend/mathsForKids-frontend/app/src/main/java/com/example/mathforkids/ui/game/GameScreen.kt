@@ -60,12 +60,21 @@ fun GameScreen(
         GameType.COUNTING
     }
 
+    // Dọc dẹp TTS khi màn hình bị hủy
+    DisposableEffect(Unit) {
+        onDispose {
+            ttsHelper.stop()
+        }
+    }
+
     // Kiểm tra hoàn thành level (3 câu đúng)
     LaunchedEffect(correctCount) {
         if (correctCount >= 3 && !showCompletionDialog && !isGameOver) {
+            showCompletionDialog = true  // Set ngay lập tức để chặn câu hỏi mới
+            ttsHelper.stop()  // Dừng âm thanh hiện tại ngay lập tức
+            delay(100)  // Delay nhỏ để đảm bảo stop() hoàn tất
             ttsHelper.speak("Chúc mừng bạn đã hoàn thành!")
             delay(2000)
-            showCompletionDialog = true
         }
     }
 
@@ -73,9 +82,11 @@ fun GameScreen(
     LaunchedEffect(lives) {
         if (lives <= 0 && !showCompletionDialog && !isGameOver) {
             isGameOver = true
+            showCompletionDialog = true  // Set ngay lập tức để chặn câu hỏi mới
+            ttsHelper.stop()  // Dừng âm thanh hiện tại ngay lập tức
+            delay(100)  // Delay nhỏ để đảm bảo stop() hoàn tất
             ttsHelper.speak("Hết lượt chơi rồi! Cố gắng ở lần sau bé nhé!")
             delay(2000)
-            showCompletionDialog = true
         }
     }
 
@@ -86,6 +97,7 @@ fun GameScreen(
                 key = questionIndex,
                 lives = lives,
                 isGameOver = isGameOver,
+                showCompletionDialog = showCompletionDialog,
                 onCorrect = { correctCount++ },
                 onIncorrect = { 
                     incorrectCount++
@@ -98,6 +110,7 @@ fun GameScreen(
                 key = questionIndex,
                 lives = lives,
                 isGameOver = isGameOver,
+                showCompletionDialog = showCompletionDialog,
                 onCorrect = { correctCount++ },
                 onIncorrect = { 
                     incorrectCount++
@@ -110,6 +123,7 @@ fun GameScreen(
                 key = questionIndex,
                 lives = lives,
                 isGameOver = isGameOver,
+                showCompletionDialog = showCompletionDialog,
                 onCorrect = { correctCount++ },
                 onIncorrect = { 
                     incorrectCount++
@@ -122,6 +136,7 @@ fun GameScreen(
                 key = questionIndex,
                 lives = lives,
                 isGameOver = isGameOver,
+                showCompletionDialog = showCompletionDialog,
                 onCorrect = { correctCount++ },
                 onIncorrect = { 
                     incorrectCount++
@@ -149,9 +164,10 @@ fun GameScreen(
                 stars = if (isGameOver) 0 else if (incorrectCount == 0) 3 else if (incorrectCount <= 2) 2 else 1,
                 onContinue = {
                     if (!isGameOver) {
-                        showCompletionDialog = false
+                        // KHÔNG set showCompletionDialog = false ở đây
+                        // Vì nếu set false, UI sẽ render lại game screen và trigger TTS đọc câu hỏi mới
+                        // Thay vào đó, giữ nguyên dialog và gọi callback onComplete
                         scope.launch {
-                            delay(300)
                             val total = correctCount + incorrectCount
                             val result = GameResult(
                                 correctAnswers = correctCount,
@@ -345,7 +361,7 @@ private fun OperatorText(op: String, color: Color) {
 
 // ----------------------------- COUNTING -----------------------------
 @Composable
-fun CountingGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
+fun CountingGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, showCompletionDialog: Boolean, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
     val range = getLevelRange(level)
     val number = remember(key) { range.random() }
     val icon = remember(key) { GAME_ICONS.random() }
@@ -355,6 +371,7 @@ fun CountingGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, on
         title = "Bé hãy đếm xem có bao nhiêu ${icon.name} nhé",
         lives = lives,
         isGameOver = isGameOver,
+        showCompletionDialog = showCompletionDialog,
         content = {
             VisualBlock("") {
                 EmojiGrid(count = number, emoji = icon.emoji, perRow = 5, sizeSp = 50)
@@ -369,9 +386,9 @@ fun CountingGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, on
     )
 }
 
-// ----------------------------- ADDITION (RÕ NHÓM A + NHÓM B) -----------------------------
+// ----------------------------- ADDITION -----------------------------
 @Composable
-fun AdditionGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
+fun AdditionGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, showCompletionDialog: Boolean, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
     val range = getOperationRange(level)
     
     val a = remember(key) { range.random() }
@@ -386,6 +403,7 @@ fun AdditionGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, on
         title = "Phép tính cộng:",
         lives = lives,
         isGameOver = isGameOver,
+        showCompletionDialog = showCompletionDialog,
         content = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
@@ -411,7 +429,7 @@ fun AdditionGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, on
 
 // ----------------------------- SUBTRACTION (A − B = CÒN LẠI) -----------------------------
 @Composable
-fun SubtractionGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
+fun SubtractionGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, showCompletionDialog: Boolean, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
     val range = getOperationRange(level)
     
     val a = remember(key) { (range.first + 2..range.last).random() }
@@ -426,14 +444,15 @@ fun SubtractionGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean,
         title = "Phép tính trừ:",
         lives = lives,
         isGameOver = isGameOver,
+        showCompletionDialog = showCompletionDialog,
         content = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 // Khối 1: Có a
-                VisualBlock("Nhóm A: $a") { EmojiGrid(count = a, emoji = icon.emoji, perRow = 6, sizeSp = 40) }
+                VisualBlock("") { EmojiGrid(count = a, emoji = icon.emoji, perRow = 6, sizeSp = 40) }
                 Spacer(Modifier.height(10.dp))
                 OperatorText("-", Color(0xFF1976D2))
                 Spacer(Modifier.height(10.dp))
-                VisualBlock("Nhóm B: $b") { EmojiGrid(count = b, emoji = icon.emoji, perRow = 6, sizeSp = 40) }
+                VisualBlock("") { EmojiGrid(count = b, emoji = icon.emoji, perRow = 6, sizeSp = 40) }
 
                 Spacer(Modifier.height(14.dp))
                 Text("$a - $b = ?", fontSize = 34.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1976D2))
@@ -453,7 +472,7 @@ fun SubtractionGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean,
 
 // ----------------------------- MATCHING -----------------------------
 @Composable
-fun MatchingGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
+fun MatchingGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, showCompletionDialog: Boolean, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
     val actualLevel = getDifficulty(level)
     // Matching game: số có 2 chữ số, tăng dần theo level
     val range = when {
@@ -469,6 +488,7 @@ fun MatchingGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, on
         title = "Tìm số giống số này:",
         lives = lives,
         isGameOver = isGameOver,
+        showCompletionDialog = showCompletionDialog,
         content = {
             Box(
                 Modifier
@@ -506,6 +526,7 @@ fun BaseGameLayout(
     title: String,
     lives: Int,
     isGameOver: Boolean,
+    showCompletionDialog: Boolean,
     content: @Composable () -> Unit,
     options: List<Int>,
     correctAnswer: Int,
@@ -519,13 +540,24 @@ fun BaseGameLayout(
     var selectedAnswer by remember { mutableStateOf<Int?>(null) }
 
     // ✅ FIX CHÍNH: reset theo questionKey (không phụ thuộc correctAnswer có trùng hay không)
-    // ✅ Chỉ đọc TTS khi chưa game over
     LaunchedEffect(questionKey) {
         answered = false
         selectedAnswer = null
-        // Tự động đọc câu hỏi khi hiển thị - NHƯNG CHỈ KHI CHƯA GAME OVER
-        if (!isGameOver) {
-            delay(300) // Đợi UI render xong
+    }
+
+    // ✅ Tách riêng logic đọc TTS để restart khi isGameOver/showCompletionDialog thay đổi
+    // Khi showCompletionDialog chuyển thành true, effect cũ (đang delay) sẽ bị hủy -> KHÔNG ĐỌC NỮA
+    LaunchedEffect(questionKey, isGameOver, showCompletionDialog) {
+        // Chặn ngay lập tức nếu game đã kết thúc hoặc đang hiển dialog
+        if (isGameOver || showCompletionDialog) {
+            return@LaunchedEffect
+        }
+        
+        // Tăng delay an toàn để đảm bảo state đã cập nhật
+        delay(if (questionKey == 0) 800 else 400)
+        
+        // Kiểm tra lại một lần nữa trước khi đọc (dù effect restart đã handle, nhưng check thêm cho chắc)
+        if (!isGameOver && !showCompletionDialog) {
             ttsHelper.speak(title)
         }
     }
