@@ -1,17 +1,36 @@
+import os
+from urllib.parse import urlparse
 from fastapi import FastAPI
 from pydantic import BaseModel
 import mysql.connector
 from mysql.connector import Error
+from typing import List, Optional
 
 app = FastAPI()
 
-# --- CẤU HÌNH DATABASE ---
-db_config = {
-    'host': '127.0.0.1',
-    'database': 'ktpmud',
-    'user': 'root',
-    'password': '123'  # Pass của bạn
-}
+# --- CẤU HÌNH DATABASE (ĐÃ NÂNG CẤP ĐỂ CHẠY CLOUD & LOCAL) ---
+# Tự động kiểm tra: Nếu có biến môi trường DB_URL (trên Render) thì dùng, không thì dùng localhost
+DATABASE_URL = os.getenv("DB_URL")
+
+if DATABASE_URL:
+    # Cấu hình cho Render + Aiven (Chạy trên mạng)
+    url = urlparse(DATABASE_URL)
+    db_config = {
+        'host': url.hostname,
+        'port': url.port,
+        'user': url.username,
+        'password': url.password,
+        'database': url.path[1:],  # Bỏ dấu / ở đầu tên db
+        # 'ssl_disabled': False    # Bỏ comment dòng này nếu gặp lỗi SSL trên cloud
+    }
+else:
+    # Cấu hình Localhost (Chạy ở nhà trên máy tính của bạn)
+    db_config = {
+        'host': '127.0.0.1',
+        'database': 'ktpmud', # Tên database dưới máy bạn
+        'user': 'root',
+        'password': '123'     # Pass của bạn
+    }
 
 # --- CÁC MODEL DỮ LIỆU ---
 class LoginRequest(BaseModel):
@@ -26,16 +45,21 @@ class RegisterRequest(BaseModel):
 
 class GameResultRequest(BaseModel):
     user_id: int
+    game_type: str      # VD: "ADDITION"
+    level_id: int       # VD: 2001
     score: float
     correct_count: int
     total_questions: int
 
-# [MỚI] Model cho việc kết nối phụ huynh - con
 class LinkRequest(BaseModel):
     parent_id: int
     student_username: str
 
 # --- CÁC API ---
+
+@app.get("/")
+def read_root():
+    return {"message": "Math App API is running!"}
 
 @app.post("/login")
 def login(item: LoginRequest):
@@ -88,14 +112,22 @@ def save_result(item: GameResultRequest):
     try:
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor()
-        # Test ID = 1 là bài luyện tập tự do
-        sql = """INSERT INTO test_results (test_id, student_id, score, correct_count, total_questions) 
-                 VALUES (1, %s, %s, %s, %s)"""
-        val = (item.user_id, item.score, item.correct_count, item.total_questions)
-        cursor.execute(sql, val)
+        
+        # 1. Lưu lịch sử kết quả
+        sql_history = """INSERT INTO test_results (test_id, student_id, score, correct_count, total_questions) 
+                         VALUES (1, %s, %s, %s, %s)"""
+        val_history = (item.user_id, item.score, item.correct_count, item.total_questions)
+        cursor.execute(sql_history, val_history)
+        
+        # 2. Mở khoá Map nếu điểm cao
+        if item.score >= 5.0:
+            sql_progress = "INSERT IGNORE INTO completed_levels (user_id, level_id) VALUES (%s, %s)"
+            cursor.execute(sql_progress, (item.user_id, item.level_id))
+
         conn.commit()
         return {"status": "success", "message": "Đã lưu kết quả"}
     except Error as e:
+        print(f"Error: {e}") 
         return {"status": "error", "message": str(e)}
     finally:
         if 'conn' in locals() and conn.is_connected(): conn.close()
@@ -105,18 +137,27 @@ def get_dashboard(user_id: int):
     try:
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor(dictionary=True)
-        sql = """SELECT COUNT(*) as total_games, SUM(total_questions) as total_questions, SUM(correct_count) as total_correct
-                 FROM test_results WHERE student_id = %s"""
-        cursor.execute(sql, (user_id,))
-        result = cursor.fetchone()
         
-        if result['total_games'] == 0:
-             return {"status": "success", "data": {"total": 0, "correct": 0}}
+        # 1. Lấy thống kê tổng quát
+        sql_stats = """SELECT SUM(total_questions) as total_questions, SUM(correct_count) as total_correct
+                       FROM test_results WHERE student_id = %s"""
+        cursor.execute(sql_stats, (user_id,))
+        stats = cursor.fetchone()
+        
+        # 2. Lấy danh sách Level đã hoàn thành
+        cursor.execute("SELECT level_id FROM completed_levels WHERE user_id = %s", (user_id,))
+        level_rows = cursor.fetchall()
+        completed_list = [row['level_id'] for row in level_rows]
+
+        total_q = int(stats['total_questions']) if stats and stats['total_questions'] else 0
+        total_c = int(stats['total_correct']) if stats and stats['total_correct'] else 0
+
         return {
             "status": "success", 
             "data": {
-                "total": int(result['total_questions'] or 0),
-                "correct": int(result['total_correct'] or 0)
+                "total": total_q,
+                "correct": total_c,
+                "completed_levels": completed_list
             }
         }
     except Error as e:
@@ -124,14 +165,13 @@ def get_dashboard(user_id: int):
     finally:
         if 'conn' in locals() and conn.is_connected(): conn.close()
 
-# [MỚI] API KẾT NỐI PHỤ HUYNH VỚI CON
 @app.post("/link_student")
 def link_student(item: LinkRequest):
     try:
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor(dictionary=True)
 
-        # 1. Tìm học sinh theo tên đăng nhập
+        # 1. Tìm học sinh
         cursor.execute("SELECT user_id FROM users WHERE username = %s AND role = 'student'", (item.student_username,))
         student = cursor.fetchone()
 
@@ -140,7 +180,7 @@ def link_student(item: LinkRequest):
 
         student_id = student['user_id']
 
-        # 2. Cập nhật parent_id vào bảng students
+        # 2. Cập nhật parent_id
         sql = "UPDATE students SET parent_id = %s WHERE user_id = %s"
         cursor.execute(sql, (item.parent_id, student_id))
         conn.commit()
@@ -152,14 +192,12 @@ def link_student(item: LinkRequest):
     finally:
         if 'conn' in locals() and conn.is_connected(): conn.close()
 
-# [MỚI] API LẤY ID CỦA CON (Để xem dashboard)
 @app.get("/get_my_child/{parent_id}")
 def get_my_child(parent_id: int):
     try:
         conn = mysql.connector.connect(**db_config)
         cursor = conn.cursor(dictionary=True)
         
-        # Lấy user_id của đứa con đầu tiên
         sql = "SELECT user_id FROM students WHERE parent_id = %s LIMIT 1"
         cursor.execute(sql, (parent_id,))
         child = cursor.fetchone()
@@ -172,3 +210,9 @@ def get_my_child(parent_id: int):
         return {"status": "error", "message": str(e)}
     finally:
          if 'conn' in locals() and conn.is_connected(): conn.close()
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+
+#uvicorn main:app --host 0.0.0.0 --port 8000 --reload

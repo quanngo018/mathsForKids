@@ -1,5 +1,10 @@
 package com.example.mathforkids
 
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -30,10 +35,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.mathforkids.navigation.Screen
 import com.example.mathforkids.ui.game.GameScreen
 import com.example.mathforkids.ui.levelselection.LevelSelectionScreen
 import com.example.mathforkids.ui.theme.MathForKidsTheme
-import com.example.mathforkids.navigation.Screen
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -66,7 +71,10 @@ fun AppNavigator() {
     LaunchedEffect(currentUserId) {
         if (currentUserId != 0) {
             ApiService.create().getDashboard(currentUserId).enqueue(object : Callback<BaseResponse<DashboardData>> {
-                override fun onResponse(call: Call<BaseResponse<DashboardData>>, response: Response<BaseResponse<DashboardData>>) {
+                override fun onResponse(
+                    call: Call<BaseResponse<DashboardData>>,
+                    response: Response<BaseResponse<DashboardData>>
+                ) {
                     if (response.body()?.status == "success") {
                         val levels = response.body()?.data?.completedLevels
                         if (levels != null) {
@@ -75,7 +83,10 @@ fun AppNavigator() {
                         }
                     }
                 }
-                override fun onFailure(call: Call<BaseResponse<DashboardData>>, t: Throwable) { /* Ignore error silently */ }
+
+                override fun onFailure(call: Call<BaseResponse<DashboardData>>, t: Throwable) {
+                    /* Ignore error silently */
+                }
             })
         }
     }
@@ -172,7 +183,9 @@ fun AppNavigator() {
             arguments = listOf(navArgument("gameType") { type = NavType.StringType; nullable = true })
         ) { backStackEntry ->
             val gameTypeStr = backStackEntry.arguments?.getString("gameType")
-            val initialGameType = if (gameTypeStr != null) try { com.example.mathforkids.model.GameType.valueOf(gameTypeStr) } catch (e: Exception) { null } else null
+            val initialGameType =
+                if (gameTypeStr != null) try { com.example.mathforkids.model.GameType.valueOf(gameTypeStr) } catch (e: Exception) { null }
+                else null
 
             LevelSelectionScreen(
                 completedLevels = completedLevels.toSet(),
@@ -190,10 +203,13 @@ fun AppNavigator() {
             )
         }
 
-        // --- GAME SCREEN (ĐÃ FIX LỖI API SAVE RESULT) ---
+        // --- GAME SCREEN ---
         composable(
             route = Screen.Game.route,
-            arguments = listOf(navArgument("gameType") { type = NavType.StringType }, navArgument("level") { type = NavType.IntType })
+            arguments = listOf(
+                navArgument("gameType") { type = NavType.StringType },
+                navArgument("level") { type = NavType.IntType }
+            )
         ) { backStackEntry ->
             val gameType = backStackEntry.arguments?.getString("gameType") ?: "COUNTING"
             val level = backStackEntry.arguments?.getInt("level") ?: 1
@@ -202,16 +218,13 @@ fun AppNavigator() {
                 gameType = gameType,
                 level = level,
                 onComplete = { result ->
-                    // Thêm vào list local để mở khoá ngay lập tức
-                    if (!completedLevels.contains(level)) {
-                        completedLevels.add(level)
-                    }
+                    if (!completedLevels.contains(level)) completedLevels.add(level)
 
-                    // Lưu điểm lên Server (FIX QUAN TRỌNG Ở ĐÂY)
                     if (currentUserId != 0) {
-                        val score = if (result.totalQuestions > 0) (result.correctAnswers.toFloat() / result.totalQuestions) * 10 else 0f
+                        val score = if (result.totalQuestions > 0)
+                            (result.correctAnswers.toFloat() / result.totalQuestions) * 10
+                        else 0f
 
-                        // [FIXED] Đã thêm gameType và level vào Request
                         val req = GameResultRequest(
                             userId = currentUserId,
                             gameType = gameType,
@@ -229,7 +242,6 @@ fun AppNavigator() {
                         })
                     }
 
-                    // Điều hướng
                     if (gameType == "WRITING") {
                         navController.navigate(Screen.LevelSelection.route) {
                             popUpTo(Screen.LevelSelection.route) { inclusive = true }
@@ -244,8 +256,12 @@ fun AppNavigator() {
             )
         }
 
-        composable(Screen.TeacherHome.route) { TeacherHomeScreen(username = currentUserName, onLogout = { navController.navigate(Screen.Login.route) }) }
-        composable(Screen.AdminHome.route) { AdminHomeScreen(username = currentUserName, onLogout = { navController.navigate(Screen.Login.route) }) }
+        composable(Screen.TeacherHome.route) {
+            TeacherHomeScreen(username = currentUserName, onLogout = { navController.navigate(Screen.Login.route) })
+        }
+        composable(Screen.AdminHome.route) {
+            AdminHomeScreen(username = currentUserName, onLogout = { navController.navigate(Screen.Login.route) })
+        }
     }
 }
 
@@ -343,7 +359,11 @@ fun DashboardScreen(userId: Int, onBack: () -> Unit) {
 
                 items(subjects.size) { index ->
                     val subject = subjects[index]
-                    val animatedProgress by animateFloatAsState(targetValue = subject.score / 10f, animationSpec = tween(1000), label = "")
+                    val animatedProgress by animateFloatAsState(
+                        targetValue = subject.score / 10f,
+                        animationSpec = tween(1000),
+                        label = ""
+                    )
 
                     Card(
                         elevation = CardDefaults.cardElevation(2.dp),
@@ -351,9 +371,11 @@ fun DashboardScreen(userId: Int, onBack: () -> Unit) {
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(48.dp).clip(CircleShape).background(subject.color.copy(alpha = 0.2f)), contentAlignment = Alignment.Center) {
-                                Text(subject.icon, fontSize = 24.sp)
-                            }
+                            Box(
+                                Modifier.size(48.dp).clip(CircleShape).background(subject.color.copy(alpha = 0.2f)),
+                                contentAlignment = Alignment.Center
+                            ) { Text(subject.icon, fontSize = 24.sp) }
+
                             Spacer(Modifier.width(16.dp))
                             Column(Modifier.weight(1f)) {
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -361,7 +383,12 @@ fun DashboardScreen(userId: Int, onBack: () -> Unit) {
                                     Text("${subject.score}", fontWeight = FontWeight.Bold, color = subject.color)
                                 }
                                 Spacer(Modifier.height(8.dp))
-                                LinearProgressIndicator(progress = animatedProgress, modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)), color = subject.color, trackColor = Color.LightGray.copy(alpha = 0.3f))
+                                LinearProgressIndicator(
+                                    progress = animatedProgress,
+                                    modifier = Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)),
+                                    color = subject.color,
+                                    trackColor = Color.LightGray.copy(alpha = 0.3f)
+                                )
                             }
                         }
                     }
@@ -377,7 +404,10 @@ fun DashboardScreen(userId: Int, onBack: () -> Unit) {
 fun ParentHomeScreen(username: String, userId: Int, onNavigateToDashboard: (Int) -> Unit, onLogout: () -> Unit) {
     val context = LocalContext.current
     var studentUsername by remember { mutableStateOf("") }
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFE1BEE7), Color(0xFFFFF8E1)))), contentAlignment = Alignment.Center) {
+    Box(
+        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFE1BEE7), Color(0xFFFFF8E1)))),
+        contentAlignment = Alignment.Center
+    ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(20.dp)) {
             Text("Phụ huynh: $username", fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(30.dp))
@@ -385,7 +415,12 @@ fun ParentHomeScreen(username: String, userId: Int, onNavigateToDashboard: (Int)
                 Column(Modifier.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("🔗 Kết nối với con", fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(10.dp))
-                    OutlinedTextField(value = studentUsername, onValueChange = { studentUsername = it }, label = { Text("Nhập tên đăng nhập của con") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(
+                        value = studentUsername,
+                        onValueChange = { studentUsername = it },
+                        label = { Text("Nhập tên đăng nhập của con") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     Spacer(Modifier.height(10.dp))
                     Button(onClick = {
                         if (studentUsername.isNotEmpty()) {
@@ -410,7 +445,9 @@ fun ParentHomeScreen(username: String, userId: Int, onNavigateToDashboard: (Int)
                     }
                     override fun onFailure(call: Call<BaseResponse<Int>>, t: Throwable) { Toast.makeText(context, "Lỗi kết nối", Toast.LENGTH_SHORT).show() }
                 })
-            }, modifier = Modifier.fillMaxWidth().height(60.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))) { Text("📊 Xem thống kê của con", fontSize = 18.sp) }
+            }, modifier = Modifier.fillMaxWidth().height(60.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))) {
+                Text("📊 Xem thống kê của con", fontSize = 18.sp)
+            }
             Spacer(Modifier.height(20.dp))
             Button(onClick = onLogout, colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) { Text("Đăng xuất") }
         }
@@ -419,23 +456,38 @@ fun ParentHomeScreen(username: String, userId: Int, onNavigateToDashboard: (Int)
 
 // ----------------------------- LOGIN & REGISTER & OTHERS -----------------------------
 @Composable
-fun LoginScreen(onLoginSuccess: (UserData) -> Unit, onNavigateToRegister: () -> Unit) {
+fun LoginScreen(
+    onLoginSuccess: (UserData) -> Unit,
+    onNavigateToRegister: () -> Unit
+) {
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
+
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Image(painter = painterResource(id = R.drawable.bg_login), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        Image(
+            painter = painterResource(id = R.drawable.bg_login),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.offset(y = (-50).dp).padding(30.dp)) {
             Text("Đăng nhập", fontSize = 32.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(20.dp))
             OutlinedTextField(value = username, onValueChange = { username = it }, label = { Text("Tên đăng nhập") })
             Spacer(Modifier.height(10.dp))
-            OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Mật khẩu") }, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation())
+            OutlinedTextField(
+                value = password,
+                onValueChange = { password = it },
+                label = { Text("Mật khẩu") },
+                visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation()
+            )
             Spacer(Modifier.height(20.dp))
             Button(onClick = {
                 ApiService.create().login(LoginRequest(username, password)).enqueue(object : Callback<BaseResponse<UserData>> {
                     override fun onResponse(call: Call<BaseResponse<UserData>>, response: Response<BaseResponse<UserData>>) {
-                        if (response.body()?.status == "success") response.body()?.data?.let(onLoginSuccess) else error = response.body()?.message ?: "Lỗi"
+                        if (response.body()?.status == "success") response.body()?.data?.let(onLoginSuccess)
+                        else error = response.body()?.message ?: "Lỗi"
                     }
                     override fun onFailure(call: Call<BaseResponse<UserData>>, t: Throwable) { error = "Lỗi kết nối" }
                 })
@@ -469,16 +521,28 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onBack: () -> Unit) {
             OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text("Mật khẩu") }, visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
             Spacer(Modifier.height(10.dp))
             ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }) {
-                OutlinedTextField(value = roles[selectedRole] ?: "", onValueChange = {}, readOnly = true, label = { Text("Vai trò") }, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }, modifier = Modifier.menuAnchor().fillMaxWidth())
+                OutlinedTextField(
+                    value = roles[selectedRole] ?: "",
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Vai trò") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
                 ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                    roles.forEach { (k, v) -> DropdownMenuItem(text = { Text(v) }, onClick = { selectedRole = k; expanded = false }) }
+                    roles.forEach { (k, v) ->
+                        DropdownMenuItem(text = { Text(v) }, onClick = { selectedRole = k; expanded = false })
+                    }
                 }
             }
             Spacer(Modifier.height(20.dp))
             Button(onClick = {
                 ApiService.create().register(RegisterRequest(username, password, fullName, selectedRole)).enqueue(object : Callback<BaseResponse<Any>> {
                     override fun onResponse(call: Call<BaseResponse<Any>>, response: Response<BaseResponse<Any>>) {
-                        if (response.body()?.status == "success") { Toast.makeText(context, "Thành công!", Toast.LENGTH_SHORT).show(); onRegisterSuccess() }
+                        if (response.body()?.status == "success") {
+                            Toast.makeText(context, "Thành công!", Toast.LENGTH_SHORT).show()
+                            onRegisterSuccess()
+                        }
                     }
                     override fun onFailure(call: Call<BaseResponse<Any>>, t: Throwable) { Toast.makeText(context, "Lỗi kết nối", Toast.LENGTH_SHORT).show() }
                 })
@@ -489,19 +553,82 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onBack: () -> Unit) {
 }
 
 @Composable
-fun StudentHomeScreen(username: String, onNavigateToLuyenTap: () -> Unit, onNavigateToDashboard: () -> Unit, onLogout: () -> Unit) {
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFE1BEE7), Color(0xFFFFF8E1)))), contentAlignment = Alignment.Center) {
+fun StudentHomeScreen(
+    username: String,
+    onNavigateToLuyenTap: () -> Unit,
+    onNavigateToDashboard: () -> Unit,
+    onLogout: () -> Unit
+) {
+    val context = LocalContext.current
+
+    // ✅ Dán link YouTube/Playlist vào đây (đổi 1 dòng là xong)
+    val teachingUrl = "https://www.youtube.com/playlist?list=PLDHr_ecbSve5j_X8dL7xMA_jYQhzLbPN3"
+
+    fun openYoutube(url: String) {
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            Toast.makeText(context, "Không mở được YouTube", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFFE1BEE7), Color(0xFFFFF8E1)))),
+        contentAlignment = Alignment.Center
+    ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text("Xin chào, $username 👋", fontSize = 28.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(40.dp))
-            Button(onClick = onNavigateToLuyenTap, modifier = Modifier.fillMaxWidth(0.7f).height(70.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))) { Text("📚 Luyện tập", fontSize = 24.sp, fontWeight = FontWeight.Bold) }
+
+            Button(
+                onClick = onNavigateToLuyenTap,
+                modifier = Modifier.fillMaxWidth(0.7f).height(70.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                shape = RoundedCornerShape(50.dp)
+            ) {
+                Text("📚 Luyện tập", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            }
+
             Spacer(Modifier.height(20.dp))
-            Button(onClick = onNavigateToDashboard, modifier = Modifier.fillMaxWidth(0.7f).height(70.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))) { Text("📊 Xem kết quả", fontSize = 24.sp, fontWeight = FontWeight.Bold) }
+
+            Button(
+                onClick = onNavigateToDashboard,
+                modifier = Modifier.fillMaxWidth(0.7f).height(70.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+                shape = RoundedCornerShape(50.dp)
+            ) {
+                Text("📊 Xem kết quả", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            }
+
+            // ✅ NÚT MỚI: DẠY HỌC (giống style 3 nút kia)
             Spacer(Modifier.height(20.dp))
-            Button(onClick = onLogout, modifier = Modifier.fillMaxWidth(0.7f).height(60.dp), colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) { Text("Đăng xuất", fontSize = 20.sp, color = Color.White) }
+            Button(
+                onClick = { openYoutube(teachingUrl) },
+                modifier = Modifier.fillMaxWidth(0.7f).height(70.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800)),
+                shape = RoundedCornerShape(50.dp)
+            ) {
+                Text("🎥 Dạy học", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            Button(
+                onClick = onLogout,
+                modifier = Modifier.fillMaxWidth(0.7f).height(60.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                shape = RoundedCornerShape(50.dp)
+            ) {
+                Text("Đăng xuất", fontSize = 20.sp, color = Color.White)
+            }
         }
     }
 }
+
+
 
 @Composable fun MainMenuScreen(username: String, onNavigateToMath: () -> Unit, onNavigateToDashboard: () -> Unit, onLogout: () -> Unit) { StudentHomeScreen(username, onNavigateToMath, onNavigateToDashboard, onLogout) }
 @Composable fun TeacherHomeScreen(username: String, onLogout: () -> Unit) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Column { Text("Giáo viên: $username"); Button(onClick = onLogout) { Text("Đăng xuất") } } } }

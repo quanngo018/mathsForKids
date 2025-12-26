@@ -73,14 +73,35 @@ interface ApiService {
 
     companion object {
         //private const val BASE_URL = "http://10.0.2.2:8000/"
+    //}
         // Thay đổi IP này theo địa chỉ máy tính chạy Server của bạn
-        private const val BASE_URL = "http://192.168.1.10:8000/"
+        private const val BASE_URL = " https://share-cook-fraser-spin.trycloudflare.com "
 
-        fun create(): ApiService {
+       fun create(): ApiService {
             return Retrofit.Builder()
                 .baseUrl(BASE_URL)
                 .addConverterFactory(GsonConverterFactory.create())
                 .build().create(ApiService::class.java)
         }
     }
+    // companion object {
+         // BASE_URL mặc định (sẽ bị RemoteConfig cập nhật lúc app mở)
+  //       @Volatile private var BASE_URL: String = "https://example.com/"
+
+    //     fun updateBaseUrl(newUrl: String) {
+     //        val u = newUrl.trim()
+    //         if (u.isNotEmpty()) {
+   //              BASE_URL = if (u.endsWith("/")) u else "$u/"
+    //         }
+    //     }
+
+   //      fun create(): ApiService {
+   //          return Retrofit.Builder()
+     //            .baseUrl(BASE_URL)
+     //            .addConverterFactory(GsonConverterFactory.create())
+    //             .build()
+    //             .create(ApiService::class.java)
+   //      }
+  //   }
+
 }

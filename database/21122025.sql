@@ -21,3 +21,4 @@ SELECT
 FROM test_results
 WHERE student_id = 5  -- Thay số 5 bằng ID học sinh bạn muốn xem
 GROUP BY test_id;test_results
+

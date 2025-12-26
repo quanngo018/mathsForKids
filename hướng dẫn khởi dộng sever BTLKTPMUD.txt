@@ -1,0 +1,20 @@
+1) Mở MariaDB (nếu bạn dùng MariaDB local)
+2) Chạy FastAPI (Server nội bộ)
+uvicorn main:app --host 0.0.0.0 --port 8000
+3) Chạy Cloudflare Quick Tunnel (public link)
+& "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel --url http://localhost:8000
+Copy link dạng:
+https://xxxx-xxxx.trycloudflare.com
+Nếu link bị đổi so với lần trước → cập nhật APK
+
+Nếu bạn đang để BASE_URL cố định trong ApiService.kt:
+
+Link mới ≠ link cũ ⇒ bạn phải:
+
+sửa BASE_URL trong ApiService.kt thành link mới (nhớ có dấu / cuối)
+
+build APK mới
+
+gửi bạn bè cài lại APK (hoặc gỡ cài lại tuỳ máy)
+
+Nếu link không đổi ⇒ không cần làm gì ở Android.
