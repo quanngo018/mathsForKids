@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.example.mathforkids.model.GameType
 import com.example.mathforkids.model.GameResult
+import com.example.mathforkids.util.rememberTTSHelper
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -217,8 +218,8 @@ fun CountingGameScreen(level: Int, key: Int, onCorrect: () -> Unit, onIncorrect:
     BaseGameLayout(
         title = "Bé hãy đếm xem có bao nhiêu ${icon.name} nhé",
         content = {
-            VisualBlock("Nhìn và đếm 👀") {
-                EmojiGrid(count = number, emoji = icon.emoji, perRow = 5, sizeSp = 44)
+            VisualBlock("") {
+                EmojiGrid(count = number, emoji = icon.emoji, perRow = 5, sizeSp = 50)
             }
         },
         options = options,
@@ -249,11 +250,11 @@ fun AdditionGameScreen(level: Int, key: Int, onCorrect: () -> Unit, onIncorrect:
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
                 // 2 khối rõ ràng: Nhóm A + Nhóm B
-                VisualBlock("Nhóm A: $a") { EmojiGrid(count = a, emoji = icon.emoji, perRow = 6, sizeSp = 40) }
+                VisualBlock("") { EmojiGrid(count = a, emoji = icon.emoji, perRow = 6, sizeSp = 40) }
                 Spacer(Modifier.height(10.dp))
                 OperatorText("+", Color(0xFF1976D2))
                 Spacer(Modifier.height(10.dp))
-                VisualBlock("Nhóm B: $b") { EmojiGrid(count = b, emoji = icon.emoji, perRow = 6, sizeSp = 40) }
+                VisualBlock("") { EmojiGrid(count = b, emoji = icon.emoji, perRow = 6, sizeSp = 40) }
 
                 Spacer(Modifier.height(14.dp))
                 Text("$a + $b = ?", fontSize = 34.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1976D2))
@@ -359,6 +360,7 @@ fun BaseGameLayout(
     onIncorrect: () -> Unit,
     onBack: () -> Unit
 ) {
+    val ttsHelper = rememberTTSHelper()
     var answered by remember { mutableStateOf(false) }
     var selectedAnswer by remember { mutableStateOf<Int?>(null) }
 
@@ -366,6 +368,9 @@ fun BaseGameLayout(
     LaunchedEffect(questionKey) {
         answered = false
         selectedAnswer = null
+        // Tự động đọc câu hỏi khi hiển thị
+        delay(300) // Đợi UI render xong
+        ttsHelper.speak(title)
     }
 
     LaunchedEffect(answered) {
@@ -387,8 +392,26 @@ fun BaseGameLayout(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(Modifier.fillMaxWidth()) {
-            IconButton(onClick = onBack) { Text("🔙", fontSize = 24.sp) }
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Button(
+                onClick = onBack,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.size(48.dp),
+                contentPadding = PaddingValues(0.dp)
+            ) { Text("←", fontSize = 24.sp, color = Color.White, fontWeight = FontWeight.Bold) }
+            
+            // Button loa để đọc lại câu hỏi
+            Button(
+                onClick = { ttsHelper.speak(title) },
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.size(48.dp),
+                contentPadding = PaddingValues(0.dp)
+            ) { Text("🔊", fontSize = 24.sp) }
         }
 
         Text(title, fontSize = 22.sp, fontWeight = FontWeight.Medium)
