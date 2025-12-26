@@ -36,6 +36,9 @@ private val GAME_ICONS = listOf(
     GameIcon("🌟", "ngôi sao lấp lánh"),
 )
 
+// ✅ Tên người cho câu hỏi cộng/trừ
+private val PERSON_NAMES = listOf("anh Quân", "anh Huy", "anh Nam")
+
 @Composable
 fun GameScreen(
     gameType: String,
@@ -395,12 +398,18 @@ fun AdditionGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, sh
     val b = remember(key) { range.random() }
     val result = a + b
 
-    val icon = remember(key) { GAME_ICONS.random() } // ✅ nhiều icon như đếm
+    val icon = remember(key) { GAME_ICONS.random() }
+    val person1 = remember(key) { PERSON_NAMES.random() }
+    val person2 = remember(key) { PERSON_NAMES.filter { it != person1 }.random() }
+    
     val optionRange = maxOf(1, result - 5)..minOf(result + 5, range.last * 2)
     val options = remember(key) { generateOptions(result, optionRange) }
+    
+    // Câu hỏi có ngữ cảnh
+    val questionText = "$person1 có $a ${icon.name}, $person2 cho $person1 thêm $b ${icon.name}. Hỏi $person1 có bao nhiêu ${icon.name}?"
 
     BaseGameLayout(
-        title = "Phép tính cộng:",
+        title = questionText,
         lives = lives,
         isGameOver = isGameOver,
         showCompletionDialog = showCompletionDialog,
@@ -436,23 +445,29 @@ fun SubtractionGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean,
     val b = remember(key) { (range.first..minOf(a - 1, range.last)).random() }
     val result = a - b
 
-    val icon = remember(key) { GAME_ICONS.random() } // ✅ nhiều icon như đếm
+    val icon = remember(key) { GAME_ICONS.random() }
+    val person1 = remember(key) { PERSON_NAMES.random() }
+    val person2 = remember(key) { PERSON_NAMES.filter { it != person1 }.random() }
+    
     val optionRange = maxOf(0, result - 5)..minOf(result + 5, range.last)
     val options = remember(key) { generateOptions(result, optionRange) }
+    
+    // Câu hỏi có ngữ cảnh
+    val questionText = "$person1 có $a ${icon.name}, $person1 cho $person2 $b ${icon.name}. Hỏi $person1 còn bao nhiêu ${icon.name}?"
 
     BaseGameLayout(
-        title = "Phép tính trừ:",
+        title = questionText,
         lives = lives,
         isGameOver = isGameOver,
         showCompletionDialog = showCompletionDialog,
         content = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 // Khối 1: Có a
-                VisualBlock("") { EmojiGrid(count = a, emoji = icon.emoji, perRow = 6, sizeSp = 40) }
+                VisualBlock("$person1 có: $a ${icon.name}") { EmojiGrid(count = a, emoji = icon.emoji, perRow = 6, sizeSp = 40) }
                 Spacer(Modifier.height(10.dp))
                 OperatorText("-", Color(0xFF1976D2))
                 Spacer(Modifier.height(10.dp))
-                VisualBlock("") { EmojiGrid(count = b, emoji = icon.emoji, perRow = 6, sizeSp = 40) }
+                VisualBlock("Cho $person2: $b ${icon.name}") { EmojiGrid(count = b, emoji = icon.emoji, perRow = 6, sizeSp = 40) }
 
                 Spacer(Modifier.height(14.dp))
                 Text("$a - $b = ?", fontSize = 34.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1976D2))
