@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mathforkids.model.MnistClassifier
+import com.example.mathforkids.util.rememberSoundHelper
 
 // --- LỚP DỮ LIỆU ĐƯỜNG VẼ (Thêm vào đây để chắc chắn không bị thiếu) ---
 
@@ -106,6 +107,7 @@ fun WritingPracticeScreen(
     val context = LocalContext.current
     // Khởi tạo AI Classifier
     val classifier = remember { MnistClassifier(context) }
+    val soundHelper = rememberSoundHelper()
 
     var paths by remember(targetDigit) { mutableStateOf(listOf<DrawPath>()) }
     var currentPath by remember(targetDigit) { mutableStateOf(Path()) }
@@ -187,7 +189,14 @@ fun WritingPracticeScreen(
                             isCorrectAnswer = (predicted == targetDigit)
                             showFeedback = true
 
-                            if (isCorrectAnswer) onCorrect() else onIncorrect()
+                            // Phát sound effect tương ứng
+                            if (isCorrectAnswer) {
+                                soundHelper.playCorrectSound()
+                                onCorrect()
+                            } else {
+                                soundHelper.playWrongSound()
+                                onIncorrect()
+                            }
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),

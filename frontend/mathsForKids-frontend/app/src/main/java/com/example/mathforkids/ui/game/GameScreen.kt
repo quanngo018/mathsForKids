@@ -17,6 +17,7 @@ import androidx.compose.ui.window.Dialog
 import com.example.mathforkids.model.GameType
 import com.example.mathforkids.model.GameResult
 import com.example.mathforkids.util.rememberTTSHelper
+import com.example.mathforkids.util.rememberSoundHelper
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -551,6 +552,7 @@ fun BaseGameLayout(
     onBack: () -> Unit
 ) {
     val ttsHelper = rememberTTSHelper()
+    val soundHelper = rememberSoundHelper()
     var answered by remember { mutableStateOf(false) }
     var selectedAnswer by remember { mutableStateOf<Int?>(null) }
 
@@ -579,6 +581,13 @@ fun BaseGameLayout(
 
     LaunchedEffect(answered) {
         if (answered) {
+            // Phát sound effect ngay lập tức
+            if (selectedAnswer == correctAnswer) {
+                soundHelper.playCorrectSound()
+            } else {
+                soundHelper.playWrongSound()
+            }
+            
             delay(500)
             if (selectedAnswer == correctAnswer) onCorrect() else onIncorrect()
         }
