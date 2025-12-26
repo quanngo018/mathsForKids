@@ -85,6 +85,7 @@ fun GameScreen(
                 level = level,
                 key = questionIndex,
                 lives = lives,
+                isGameOver = isGameOver,
                 onCorrect = { correctCount++ },
                 onIncorrect = { 
                     incorrectCount++
@@ -96,6 +97,7 @@ fun GameScreen(
                 level = level,
                 key = questionIndex,
                 lives = lives,
+                isGameOver = isGameOver,
                 onCorrect = { correctCount++ },
                 onIncorrect = { 
                     incorrectCount++
@@ -107,6 +109,7 @@ fun GameScreen(
                 level = level,
                 key = questionIndex,
                 lives = lives,
+                isGameOver = isGameOver,
                 onCorrect = { correctCount++ },
                 onIncorrect = { 
                     incorrectCount++
@@ -118,6 +121,7 @@ fun GameScreen(
                 level = level,
                 key = questionIndex,
                 lives = lives,
+                isGameOver = isGameOver,
                 onCorrect = { correctCount++ },
                 onIncorrect = { 
                     incorrectCount++
@@ -341,7 +345,7 @@ private fun OperatorText(op: String, color: Color) {
 
 // ----------------------------- COUNTING -----------------------------
 @Composable
-fun CountingGameScreen(level: Int, key: Int, lives: Int, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
+fun CountingGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
     val range = getLevelRange(level)
     val number = remember(key) { range.random() }
     val icon = remember(key) { GAME_ICONS.random() }
@@ -350,6 +354,7 @@ fun CountingGameScreen(level: Int, key: Int, lives: Int, onCorrect: () -> Unit, 
     BaseGameLayout(
         title = "Bé hãy đếm xem có bao nhiêu ${icon.name} nhé",
         lives = lives,
+        isGameOver = isGameOver,
         content = {
             VisualBlock("") {
                 EmojiGrid(count = number, emoji = icon.emoji, perRow = 5, sizeSp = 50)
@@ -366,7 +371,7 @@ fun CountingGameScreen(level: Int, key: Int, lives: Int, onCorrect: () -> Unit, 
 
 // ----------------------------- ADDITION (RÕ NHÓM A + NHÓM B) -----------------------------
 @Composable
-fun AdditionGameScreen(level: Int, key: Int, lives: Int, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
+fun AdditionGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
     val range = getOperationRange(level)
     
     val a = remember(key) { range.random() }
@@ -380,6 +385,7 @@ fun AdditionGameScreen(level: Int, key: Int, lives: Int, onCorrect: () -> Unit, 
     BaseGameLayout(
         title = "Phép tính cộng:",
         lives = lives,
+        isGameOver = isGameOver,
         content = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
@@ -405,7 +411,7 @@ fun AdditionGameScreen(level: Int, key: Int, lives: Int, onCorrect: () -> Unit, 
 
 // ----------------------------- SUBTRACTION (A − B = CÒN LẠI) -----------------------------
 @Composable
-fun SubtractionGameScreen(level: Int, key: Int, lives: Int, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
+fun SubtractionGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
     val range = getOperationRange(level)
     
     val a = remember(key) { (range.first + 2..range.last).random() }
@@ -419,6 +425,7 @@ fun SubtractionGameScreen(level: Int, key: Int, lives: Int, onCorrect: () -> Uni
     BaseGameLayout(
         title = "Phép tính trừ:",
         lives = lives,
+        isGameOver = isGameOver,
         content = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 // Khối 1: Có a
@@ -446,7 +453,7 @@ fun SubtractionGameScreen(level: Int, key: Int, lives: Int, onCorrect: () -> Uni
 
 // ----------------------------- MATCHING -----------------------------
 @Composable
-fun MatchingGameScreen(level: Int, key: Int, lives: Int, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
+fun MatchingGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
     val actualLevel = getDifficulty(level)
     // Matching game: số có 2 chữ số, tăng dần theo level
     val range = when {
@@ -461,6 +468,7 @@ fun MatchingGameScreen(level: Int, key: Int, lives: Int, onCorrect: () -> Unit, 
     BaseGameLayout(
         title = "Tìm số giống số này:",
         lives = lives,
+        isGameOver = isGameOver,
         content = {
             Box(
                 Modifier
@@ -497,6 +505,7 @@ fun generateOptions(correct: Int, range: IntRange): List<Int> {
 fun BaseGameLayout(
     title: String,
     lives: Int,
+    isGameOver: Boolean,
     content: @Composable () -> Unit,
     options: List<Int>,
     correctAnswer: Int,
@@ -510,12 +519,15 @@ fun BaseGameLayout(
     var selectedAnswer by remember { mutableStateOf<Int?>(null) }
 
     // ✅ FIX CHÍNH: reset theo questionKey (không phụ thuộc correctAnswer có trùng hay không)
+    // ✅ Chỉ đọc TTS khi chưa game over
     LaunchedEffect(questionKey) {
         answered = false
         selectedAnswer = null
-        // Tự động đọc câu hỏi khi hiển thị
-        delay(300) // Đợi UI render xong
-        ttsHelper.speak(title)
+        // Tự động đọc câu hỏi khi hiển thị - NHƯNG CHỈ KHI CHƯA GAME OVER
+        if (!isGameOver) {
+            delay(300) // Đợi UI render xong
+            ttsHelper.speak(title)
+        }
     }
 
     LaunchedEffect(answered) {
