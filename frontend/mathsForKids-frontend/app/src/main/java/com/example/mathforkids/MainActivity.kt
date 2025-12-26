@@ -479,6 +479,7 @@ fun LoginScreen(
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
+    var offlineMode by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Image(
@@ -489,6 +490,24 @@ fun LoginScreen(
         )
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.offset(y = (-50).dp).padding(30.dp)) {
             Text("Đăng nhập", fontSize = 32.sp, fontWeight = FontWeight.Bold)
+            
+            // Hiển thị badge offline mode nếu đang bật
+            if (offlineMode) {
+                Spacer(Modifier.height(8.dp))
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFF9800)),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        "📴 Chế độ Offline",
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+            
             Spacer(Modifier.height(20.dp))
             OutlinedTextField(value = username, onValueChange = { username = it }, label = { Text("Tên đăng nhập") })
             Spacer(Modifier.height(10.dp))
@@ -500,15 +519,63 @@ fun LoginScreen(
             )
             Spacer(Modifier.height(20.dp))
             Button(onClick = {
+                // Kiểm tra tài khoản offline trước
+                if (username == "hs" && password == "1") {
+                    offlineMode = true
+                    error = ""
+                    onLoginSuccess(UserData(
+                        userId = 999,
+                        fullName = "Học sinh Demo",
+                        role = "student",
+                        avatar = ""
+                    ))
+                    return@Button
+                }
+                
+                // Nếu không phải tài khoản offline, gọi API
+                offlineMode = false
                 ApiService.create().login(LoginRequest(username, password)).enqueue(object : Callback<BaseResponse<UserData>> {
                     override fun onResponse(call: Call<BaseResponse<UserData>>, response: Response<BaseResponse<UserData>>) {
-                        if (response.body()?.status == "success") response.body()?.data?.let(onLoginSuccess)
-                        else error = response.body()?.message ?: "Lỗi"
+                        if (response.body()?.status == "success") {
+                            error = ""
+                            response.body()?.data?.let(onLoginSuccess)
+                        } else {
+                            error = response.body()?.message ?: "Lỗi"
+                        }
                     }
-                    override fun onFailure(call: Call<BaseResponse<UserData>>, t: Throwable) { error = "Lỗi kết nối" }
+                    override fun onFailure(call: Call<BaseResponse<UserData>>, t: Throwable) { 
+                        error = "Lỗi kết nối - Thử dùng tài khoản offline (hs/1)"
+                    }
                 })
             }, modifier = Modifier.fillMaxWidth()) { Text("Đăng nhập") }
-            if (error.isNotEmpty()) Text(error, color = Color.Red)
+            if (error.isNotEmpty()) Text(error, color = Color.Red, fontSize = 12.sp)
+            
+            // Hint về tài khoản offline
+            /*
+            Spacer(Modifier.height(8.dp))
+            Card(
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFE3F2FD)),
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        "💡 Mẹo: Test offline",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp,
+                        color = Color(0xFF1976D2)
+                    )
+                    Text(
+                        "Username: hs | Password: 1",
+                        fontSize = 11.sp,
+                        color = Color.DarkGray
+                    )
+                }
+            }
+            */
+            Spacer(Modifier.height(12.dp))
             TextButton(onClick = onNavigateToRegister) { Text("Đăng ký ngay") }
         }
     }

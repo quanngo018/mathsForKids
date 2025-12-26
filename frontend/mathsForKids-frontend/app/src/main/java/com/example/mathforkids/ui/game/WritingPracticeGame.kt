@@ -119,7 +119,13 @@ fun WritingPracticeScreen(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             // Header
             Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                IconButton(onClick = onBack) { Text("🔙", fontSize = 24.sp) }
+                Button(
+                    onClick = onBack,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0)),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.size(48.dp),
+                    contentPadding = PaddingValues(0.dp)
+                ) { Text("←", fontSize = 24.sp, color = Color.White, fontWeight = FontWeight.Bold) }
                 Text("Bé tập viết số $targetDigit", fontSize = 24.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.width(48.dp))
             }
