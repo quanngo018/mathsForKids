@@ -211,8 +211,11 @@ fun LevelSelectionHeader(onBack: () -> Unit, title: String) {
     ) {
         Button(
             onClick = onBack,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0))
-        ) { Text("⬅", fontSize = 18.sp, color = Color.White) }
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0)),
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.size(48.dp),
+            contentPadding = PaddingValues(0.dp)
+        ) { Text("←", fontSize = 24.sp, color = Color.White, fontWeight = FontWeight.Bold) }
 
         Spacer(Modifier.width(16.dp))
 

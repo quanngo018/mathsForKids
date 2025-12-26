@@ -148,6 +148,40 @@ fun LevelCompletionDialog(
 // ----------------------------- UTILS -----------------------------
 fun getDifficulty(level: Int): Int = if (level > 1000) level % 1000 else level
 
+/**
+ * Tính toán range số dựa trên level
+ * Level 1-3: số từ 1-5
+ * Level 4-6: số từ 1-10
+ * Level 7-9: số từ 5-15
+ * Level 10+: số từ 5-20
+ */
+fun getLevelRange(level: Int): IntRange {
+    val actualLevel = getDifficulty(level)
+    return when {
+        actualLevel <= 3 -> 1..5      // Dễ: 1-5
+        actualLevel <= 6 -> 1..10     // Trung bình: 1-10
+        actualLevel <= 9 -> 5..15     // Khó: 5-15
+        else -> 5..20                 // Rất khó: 5-20
+    }
+}
+
+/**
+ * Tính toán số tối đa cho phép cộng/trừ dựa trên level
+ * Level 1-3: mỗi số từ 1-3
+ * Level 4-6: mỗi số từ 1-5
+ * Level 7-9: mỗi số từ 3-8
+ * Level 10+: mỗi số từ 5-10
+ */
+fun getOperationRange(level: Int): IntRange {
+    val actualLevel = getDifficulty(level)
+    return when {
+        actualLevel <= 3 -> 1..3      // Dễ: 1-3
+        actualLevel <= 6 -> 1..5      // Trung bình: 1-5
+        actualLevel <= 9 -> 3..8      // Khó: 3-8
+        else -> 5..10                 // Rất khó: 5-10
+    }
+}
+
 @Composable
 private fun EmojiGrid(
     count: Int,
@@ -211,9 +245,10 @@ private fun OperatorText(op: String, color: Color) {
 // ----------------------------- COUNTING -----------------------------
 @Composable
 fun CountingGameScreen(level: Int, key: Int, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
-    val number = remember(key) { (1..10).random() }
+    val range = getLevelRange(level)
+    val number = remember(key) { range.random() }
     val icon = remember(key) { GAME_ICONS.random() }
-    val options = remember(key) { generateOptions(number, 1..10) }
+    val options = remember(key) { generateOptions(number, range) }
 
     BaseGameLayout(
         title = "Bé hãy đếm xem có bao nhiêu ${icon.name} nhé",
@@ -234,15 +269,15 @@ fun CountingGameScreen(level: Int, key: Int, onCorrect: () -> Unit, onIncorrect:
 // ----------------------------- ADDITION (RÕ NHÓM A + NHÓM B) -----------------------------
 @Composable
 fun AdditionGameScreen(level: Int, key: Int, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
-    val diff = getDifficulty(level)
-    val maxNum = 5 * diff
-
-    val a = remember(key) { (1..maxNum).random() }
-    val b = remember(key) { (1..maxNum).random() }
+    val range = getOperationRange(level)
+    
+    val a = remember(key) { range.random() }
+    val b = remember(key) { range.random() }
     val result = a + b
 
     val icon = remember(key) { GAME_ICONS.random() } // ✅ nhiều icon như đếm
-    val options = remember(key) { generateOptions(result, (result - 5)..(result + 5)) }
+    val optionRange = maxOf(1, result - 5)..minOf(result + 5, range.last * 2)
+    val options = remember(key) { generateOptions(result, optionRange) }
 
     BaseGameLayout(
         title = "Phép tính cộng:",
@@ -272,15 +307,15 @@ fun AdditionGameScreen(level: Int, key: Int, onCorrect: () -> Unit, onIncorrect:
 // ----------------------------- SUBTRACTION (A − B = CÒN LẠI) -----------------------------
 @Composable
 fun SubtractionGameScreen(level: Int, key: Int, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
-    val diff = getDifficulty(level)
-    val maxNum = 5 * diff + 6
-
-    val a = remember(key) { (6..maxNum).random() }
-    val b = remember(key) { (1 until a).random() }
+    val range = getOperationRange(level)
+    
+    val a = remember(key) { (range.first + 2..range.last).random() }
+    val b = remember(key) { (range.first..minOf(a - 1, range.last)).random() }
     val result = a - b
 
     val icon = remember(key) { GAME_ICONS.random() } // ✅ nhiều icon như đếm
-    val options = remember(key) { generateOptions(result, (result - 5)..(result + 5)) }
+    val optionRange = maxOf(0, result - 5)..minOf(result + 5, range.last)
+    val options = remember(key) { generateOptions(result, optionRange) }
 
     BaseGameLayout(
         title = "Phép tính trừ:",
@@ -309,11 +344,19 @@ fun SubtractionGameScreen(level: Int, key: Int, onCorrect: () -> Unit, onIncorre
     )
 }
 
-// ----------------------------- MATCHING (GIỮ NGUYÊN) -----------------------------
+// ----------------------------- MATCHING -----------------------------
 @Composable
 fun MatchingGameScreen(level: Int, key: Int, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
-    val number = remember(key) { (10..99).random() }
-    val options = remember(key) { generateOptions(number, 10..99) }
+    val actualLevel = getDifficulty(level)
+    // Matching game: số có 2 chữ số, tăng dần theo level
+    val range = when {
+        actualLevel <= 3 -> 10..30    // Dễ: 10-30
+        actualLevel <= 6 -> 20..60    // Trung bình: 20-60  
+        actualLevel <= 9 -> 40..80    // Khó: 40-80
+        else -> 50..99                // Rất khó: 50-99
+    }
+    val number = remember(key) { range.random() }
+    val options = remember(key) { generateOptions(number, range) }
 
     BaseGameLayout(
         title = "Tìm số giống số này:",
