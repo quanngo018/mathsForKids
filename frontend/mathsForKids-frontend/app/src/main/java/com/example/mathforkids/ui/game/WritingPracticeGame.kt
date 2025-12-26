@@ -21,6 +21,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.mathforkids.model.MnistClassifier
 import com.example.mathforkids.util.rememberSoundHelper
+import com.example.mathforkids.util.rememberTTSHelper
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 // --- LỚP DỮ LIỆU ĐƯỜNG VẼ (Thêm vào đây để chắc chắn không bị thiếu) ---
 
@@ -58,6 +61,20 @@ fun WritingPracticeGame( // <--- ĐÃ SỬA TÊN CHO KHỚP VỚI GAMESCREEN
 
 @Composable
 fun DigitSelectionScreen(onDigitSelected: (Int) -> Unit, onBack: () -> Unit) {
+    val ttsHelper = rememberTTSHelper()
+
+    // Đọc hướng dẫn khi vào màn hình chọn số
+    LaunchedEffect(Unit) {
+        delay(500)
+        ttsHelper.speak("Bé hãy chọn số muốn tập viết nhé")
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            ttsHelper.stop()
+        }
+    }
+
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFFFF3E0), Color(0xFFFFE0B2)))).padding(16.dp)) {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -108,6 +125,8 @@ fun WritingPracticeScreen(
     // Khởi tạo AI Classifier
     val classifier = remember { MnistClassifier(context) }
     val soundHelper = rememberSoundHelper()
+    val ttsHelper = rememberTTSHelper()
+    val scope = rememberCoroutineScope()
 
     var paths by remember(targetDigit) { mutableStateOf(listOf<DrawPath>()) }
     var currentPath by remember(targetDigit) { mutableStateOf(Path()) }
@@ -115,7 +134,18 @@ fun WritingPracticeScreen(
     var showFeedback by remember(targetDigit) { mutableStateOf(false) }
     var isCorrectAnswer by remember(targetDigit) { mutableStateOf(false) }
 
-    DisposableEffect(Unit) { onDispose { classifier.close() } }
+    // Đọc hướng dẫn khi bắt đầu
+    LaunchedEffect(targetDigit) {
+        delay(500)
+        ttsHelper.speak("Bé hãy viết số $targetDigit trên bảng nhé")
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            classifier.close()
+            ttsHelper.stop()
+        }
+    }
 
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFFFF3E0), Color(0xFFFFE0B2)))).padding(8.dp)) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -189,13 +219,19 @@ fun WritingPracticeScreen(
                             isCorrectAnswer = (predicted == targetDigit)
                             showFeedback = true
 
-                            // Phát sound effect tương ứng
-                            if (isCorrectAnswer) {
-                                soundHelper.playCorrectSound()
-                                onCorrect()
-                            } else {
-                                soundHelper.playWrongSound()
-                                onIncorrect()
+                            // Phát sound effect và đọc kết quả
+                            scope.launch {
+                                if (isCorrectAnswer) {
+                                    soundHelper.playCorrectSound()
+                                    delay(100)
+                                    ttsHelper.speak("Chính xác! Bé giỏi quá!")
+                                    onCorrect()
+                                } else {
+                                    soundHelper.playWrongSound()
+                                    delay(100)
+                                    ttsHelper.speak("Sai rồi, bé thử lại nhé!")
+                                    onIncorrect()
+                                }
                             }
                         }
                     },

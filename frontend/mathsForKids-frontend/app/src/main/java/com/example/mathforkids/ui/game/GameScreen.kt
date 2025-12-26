@@ -77,7 +77,7 @@ fun GameScreen(
             showCompletionDialog = true  // Set ngay lập tức để chặn câu hỏi mới
             ttsHelper.stop()  // Dừng âm thanh hiện tại ngay lập tức
             delay(100)  // Delay nhỏ để đảm bảo stop() hoàn tất
-            ttsHelper.speak("Chúc mừng bạn đã hoàn thành!")
+            ttsHelper.speak("Chúc mừng bé đã hoàn thành!")
             delay(2000)
         }
     }
