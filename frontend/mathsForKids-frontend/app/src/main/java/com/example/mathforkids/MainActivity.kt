@@ -600,7 +600,7 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onBack: () -> Unit) {
     val context = LocalContext.current
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Image(painter = painterResource(id = R.drawable.bg_dangky), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        Image(painter = painterResource(id = R.drawable.dangky), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.offset(y = (-30).dp).padding(30.dp)) {
             Text("Đăng ký", fontSize = 32.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(20.dp))
