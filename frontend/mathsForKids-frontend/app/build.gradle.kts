@@ -115,4 +115,6 @@ dependencies {
 
     // --- TensorFlow Lite (AI nhận diện chữ viết) ---
     implementation("org.tensorflow:tensorflow-lite:2.17.0")
+    // --- List bài học
+    implementation("io.coil-kt:coil-compose:2.7.0")
 }

@@ -42,6 +42,7 @@ import com.example.mathforkids.ui.theme.MathForKidsTheme
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import com.example.mathforkids.ui.learning.LearningScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -147,6 +148,7 @@ fun AppNavigator() {
                     navController.navigate(Screen.Dashboard.route)
                 },
                 onNavigateToSettings = { navController.navigate(Screen.Settings.route) },
+                onNavigateToLearning = { navController.navigate(Screen.Learning.route) },  // <-- Thêm cái này mới
                 onLogout = {
                     currentUserId = 0
                     navController.navigate(Screen.Login.route) { popUpTo(Screen.StudentHome.route) { inclusive = true } }
@@ -163,6 +165,7 @@ fun AppNavigator() {
         }
 
         // --- MENU CHUNG ---
+        // --- MENU CHUNG ---
         composable(Screen.Menu.route) {
             MainMenuScreen(
                 username = currentUserName,
@@ -171,6 +174,7 @@ fun AppNavigator() {
                     dashboardUserId = currentUserId
                     navController.navigate(Screen.Dashboard.route)
                 },
+                onNavigateToLearning = { navController.navigate(Screen.Learning.route) }, // Thêm dòng này
                 onLogout = {
                     currentUserId = 0
                     navController.navigate(Screen.Login.route) { popUpTo(Screen.Menu.route) { inclusive = true } }
@@ -277,6 +281,9 @@ fun AppNavigator() {
             com.example.mathforkids.ui.test.TTSTestScreen(
                 onBack = { navController.popBackStack() }
             )
+        }
+        composable(Screen.Learning.route) {
+            LearningScreen(onBack = { navController.popBackStack() })
         }
     }
 }
@@ -641,21 +648,10 @@ fun StudentHomeScreen(
     onNavigateToLuyenTap: () -> Unit,
     onNavigateToDashboard: () -> Unit,
     onNavigateToSettings: (() -> Unit)? = null,
+    onNavigateToLearning: () -> Unit,
     onLogout: () -> Unit
 ) {
     val context = LocalContext.current
-
-    // ✅ Dán link YouTube/Playlist vào đây (đổi 1 dòng là xong)
-    val teachingUrl = "https://www.youtube.com/playlist?list=PLDHr_ecbSve5j_X8dL7xMA_jYQhzLbPN3"
-
-    fun openYoutube(url: String) {
-        try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            Toast.makeText(context, "Không mở được YouTube", Toast.LENGTH_SHORT).show()
-        }
-    }
 
     Box(
         Modifier
@@ -690,7 +686,7 @@ fun StudentHomeScreen(
             // ✅ NÚT MỚI: DẠY HỌC (giống style 3 nút kia)
             Spacer(Modifier.height(20.dp))
             Button(
-                onClick = { openYoutube(teachingUrl) },
+                onClick = onNavigateToLearning,
                 modifier = Modifier.fillMaxWidth(0.7f).height(70.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800)),
                 shape = RoundedCornerShape(50.dp)
@@ -727,12 +723,13 @@ fun StudentHomeScreen(
 
 
 
-@Composable fun MainMenuScreen(username: String, onNavigateToMath: () -> Unit, onNavigateToDashboard: () -> Unit, onLogout: () -> Unit) { 
+@Composable fun MainMenuScreen(username: String, onNavigateToMath: () -> Unit, onNavigateToDashboard: () -> Unit, onNavigateToLearning: () -> Unit, onLogout: () -> Unit) {
     StudentHomeScreen(
         username = username, 
         onNavigateToLuyenTap = onNavigateToMath, 
         onNavigateToDashboard = onNavigateToDashboard, 
         onNavigateToSettings = null,
+        onNavigateToLearning= onNavigateToLearning,
         onLogout = onLogout
     ) 
 }
