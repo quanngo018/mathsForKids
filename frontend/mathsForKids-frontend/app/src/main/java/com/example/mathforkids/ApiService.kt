@@ -75,7 +75,7 @@ interface ApiService {
         //private const val BASE_URL = "http://10.0.2.2:8000/"
     //}
         // Thay đổi IP này theo địa chỉ máy tính chạy Server của bạn
-        private const val BASE_URL = " https://share-cook-fraser-spin.trycloudflare.com "
+        private const val BASE_URL = " https://subscriber-exotic-paid-husband.trycloudflare.com "
 
        fun create(): ApiService {
             return Retrofit.Builder()
