@@ -1,0 +1,1 @@
+ALTER TABLE students ADD COLUMN current_level INT DEFAULT 1;
