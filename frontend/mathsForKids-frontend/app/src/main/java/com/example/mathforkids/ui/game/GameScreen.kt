@@ -49,8 +49,6 @@ fun GameScreen(
 ) {
     var correctCount by remember { mutableStateOf(0) }
     var incorrectCount by remember { mutableStateOf(0) }
-    var lives by remember { mutableStateOf(3) }
-    var isGameOver by remember { mutableStateOf(false) }
     var showCompletionDialog by remember { mutableStateOf(false) }
     val ttsHelper = rememberTTSHelper()
     val scope = rememberCoroutineScope()
@@ -73,23 +71,11 @@ fun GameScreen(
 
     // Kiểm tra hoàn thành level (3 câu đúng)
     LaunchedEffect(correctCount) {
-        if (correctCount >= 3 && !showCompletionDialog && !isGameOver) {
+        if (correctCount >= 3 && !showCompletionDialog) {
             showCompletionDialog = true  // Set ngay lập tức để chặn câu hỏi mới
             ttsHelper.stop()  // Dừng âm thanh hiện tại ngay lập tức
             delay(100)  // Delay nhỏ để đảm bảo stop() hoàn tất
             ttsHelper.speak("Chúc mừng bé đã hoàn thành!")
-            delay(2000)
-        }
-    }
-
-    // Kiểm tra hết mạng
-    LaunchedEffect(lives) {
-        if (lives <= 0 && !showCompletionDialog && !isGameOver) {
-            isGameOver = true
-            showCompletionDialog = true  // Set ngay lập tức để chặn câu hỏi mới
-            ttsHelper.stop()  // Dừng âm thanh hiện tại ngay lập tức
-            delay(100)  // Delay nhỏ để đảm bảo stop() hoàn tất
-            ttsHelper.speak("Hết lượt chơi rồi! Cố gắng ở lần sau bé nhé!")
             delay(2000)
         }
     }
@@ -99,63 +85,51 @@ fun GameScreen(
             GameType.COUNTING -> CountingGameScreen(
                 level = level,
                 key = questionIndex,
-                lives = lives,
-                isGameOver = isGameOver,
+                lives = 999,                // không còn giới hạn mạng
+                isGameOver = false,          // không game over theo mạng
                 showCompletionDialog = showCompletionDialog,
                 onCorrect = { correctCount++ },
-                onIncorrect = { 
-                    incorrectCount++
-                    if (lives > 0) lives--
-                },
+                onIncorrect = { incorrectCount++ },
                 onBack = onBack
             )
+
             GameType.ADDITION -> AdditionGameScreen(
                 level = level,
                 key = questionIndex,
-                lives = lives,
-                isGameOver = isGameOver,
+                lives = 999,
+                isGameOver = false,
                 showCompletionDialog = showCompletionDialog,
                 onCorrect = { correctCount++ },
-                onIncorrect = { 
-                    incorrectCount++
-                    if (lives > 0) lives--
-                },
+                onIncorrect = { incorrectCount++ },
                 onBack = onBack
             )
+
             GameType.SUBTRACTION -> SubtractionGameScreen(
                 level = level,
                 key = questionIndex,
-                lives = lives,
-                isGameOver = isGameOver,
+                lives = 999,
+                isGameOver = false,
                 showCompletionDialog = showCompletionDialog,
                 onCorrect = { correctCount++ },
-                onIncorrect = { 
-                    incorrectCount++
-                    if (lives > 0) lives--
-                },
+                onIncorrect = { incorrectCount++ },
                 onBack = onBack
             )
+
             GameType.MATCHING -> MatchingGameScreen(
                 level = level,
                 key = questionIndex,
-                lives = lives,
-                isGameOver = isGameOver,
+                lives = 999,
+                isGameOver = false,
                 showCompletionDialog = showCompletionDialog,
                 onCorrect = { correctCount++ },
-                onIncorrect = { 
-                    incorrectCount++
-                    if (lives > 0) lives--
-                },
+                onIncorrect = { incorrectCount++ },
                 onBack = onBack
             )
 
             GameType.WRITING -> WritingPracticeGame(
                 level = level,
                 onCorrect = { correctCount++ },
-                onIncorrect = { 
-                    incorrectCount++
-                    if (lives > 0) lives--
-                },
+                onIncorrect = { incorrectCount++ },
                 onBack = onBack
             )
         }
@@ -164,34 +138,25 @@ fun GameScreen(
             LevelCompletionDialog(
                 correctAnswers = correctCount,
                 incorrectAnswers = incorrectCount,
-                isGameOver = isGameOver,
-                stars = if (isGameOver) 0 else if (incorrectCount == 0) 3 else if (incorrectCount <= 2) 2 else 1,
+                isGameOver = false,
+                stars = if (incorrectCount == 0) 3 else if (incorrectCount <= 2) 2 else 1,
                 onContinue = {
-                    if (!isGameOver) {
-                        // KHÔNG set showCompletionDialog = false ở đây
-                        // Vì nếu set false, UI sẽ render lại game screen và trigger TTS đọc câu hỏi mới
-                        // Thay vào đó, giữ nguyên dialog và gọi callback onComplete
-                        scope.launch {
-                            val total = correctCount + incorrectCount
-                            val result = GameResult(
-                                correctAnswers = correctCount,
-                                totalQuestions = if (total == 0) 1 else total,
-                                gameType = type,
-                                level = level
-                            )
-                            onComplete(result)
-                        }
-                    } else {
-                        // Game over: quay lại
-                        onBack()
+                    // Giữ nguyên behavior: không set showCompletionDialog = false ở đây
+                    scope.launch {
+                        val total = correctCount + incorrectCount
+                        val result = GameResult(
+                            correctAnswers = correctCount,
+                            totalQuestions = if (total == 0) 1 else total,
+                            gameType = type,
+                            level = level
+                        )
+                        onComplete(result)
                     }
                 },
                 onPlayAgain = {
                     showCompletionDialog = false
                     correctCount = 0
                     incorrectCount = 0
-                    lives = 3
-                    isGameOver = false
                 },
                 onBack = {
                     showCompletionDialog = false
@@ -201,6 +166,7 @@ fun GameScreen(
         }
     }
 }
+
 
 // ----------------------------- DIALOG -----------------------------
 @Composable
@@ -569,10 +535,10 @@ fun BaseGameLayout(
         if (isGameOver || showCompletionDialog) {
             return@LaunchedEffect
         }
-        
+
         // Tăng delay an toàn để đảm bảo state đã cập nhật
         delay(if (questionKey == 0) 800 else 400)
-        
+
         // Kiểm tra lại một lần nữa trước khi đọc (dù effect restart đã handle, nhưng check thêm cho chắc)
         if (!isGameOver && !showCompletionDialog) {
             ttsHelper.speak(title)
@@ -587,7 +553,7 @@ fun BaseGameLayout(
             } else {
                 soundHelper.playWrongSound()
             }
-            
+
             delay(500)
             if (selectedAnswer == correctAnswer) onCorrect() else onIncorrect()
         }
@@ -605,7 +571,7 @@ fun BaseGameLayout(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // Header với back button, lives và speaker button
+        // Header với back button và speaker button (đã bỏ trái tim)
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -618,20 +584,10 @@ fun BaseGameLayout(
                 modifier = Modifier.size(48.dp),
                 contentPadding = PaddingValues(0.dp)
             ) { Text("←", fontSize = 24.sp, color = Color.White, fontWeight = FontWeight.Bold) }
-            
-            // Hiển thị lives (3 trái tim)
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                repeat(3) { index ->
-                    Text(
-                        if (index < lives) "❤️" else "🤍",
-                        fontSize = 28.sp
-                    )
-                }
-            }
-            
+
+            // ✅ Bỏ hiển thị lives (trái tim), giữ khoảng trống để cân layout
+            Spacer(modifier = Modifier.width(48.dp))
+
             // Button loa để đọc lại câu hỏi
             Button(
                 onClick = { ttsHelper.speak(title) },
@@ -666,3 +622,4 @@ fun BaseGameLayout(
         }
     }
 }
+

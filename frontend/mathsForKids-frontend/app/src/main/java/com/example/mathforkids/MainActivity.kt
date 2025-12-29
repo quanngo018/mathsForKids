@@ -659,32 +659,13 @@ fun StudentHomeScreen(
             .background(Brush.verticalGradient(listOf(Color(0xFFE1BEE7), Color(0xFFFFF8E1)))),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(18.dp)
+        ) {
             Text("Xin chào, $username 👋", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(40.dp))
 
-            Button(
-                onClick = onNavigateToLuyenTap,
-                modifier = Modifier.fillMaxWidth(0.7f).height(70.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
-                shape = RoundedCornerShape(50.dp)
-            ) {
-                Text("📚 Luyện tập", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            }
-
-            Spacer(Modifier.height(20.dp))
-
-            Button(
-                onClick = onNavigateToDashboard,
-                modifier = Modifier.fillMaxWidth(0.7f).height(70.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
-                shape = RoundedCornerShape(50.dp)
-            ) {
-                Text("📊 Xem kết quả", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            }
-
-            // ✅ NÚT MỚI: DẠY HỌC (giống style 3 nút kia)
-            Spacer(Modifier.height(20.dp))
+            // 🎥 Học tập
             Button(
                 onClick = onNavigateToLearning,
                 modifier = Modifier.fillMaxWidth(0.7f).height(70.dp),
@@ -694,9 +675,28 @@ fun StudentHomeScreen(
                 Text("🎥 Học tập", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
             }
 
-            // Button Cài đặt
+            // 📚 Luyện tập
+            Button(
+                onClick = onNavigateToLuyenTap,
+                modifier = Modifier.fillMaxWidth(0.7f).height(70.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                shape = RoundedCornerShape(50.dp)
+            ) {
+                Text("📚 Luyện tập", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            }
+
+            // 📊 Xem kết quả
+            Button(
+                onClick = onNavigateToDashboard,
+                modifier = Modifier.fillMaxWidth(0.7f).height(70.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+                shape = RoundedCornerShape(50.dp)
+            ) {
+                Text("📊 Xem kết quả", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            }
+
+            // ⚙️ Cài đặt
             if (onNavigateToSettings != null) {
-                Spacer(Modifier.height(20.dp))
                 Button(
                     onClick = onNavigateToSettings,
                     modifier = Modifier.fillMaxWidth(0.7f).height(70.dp),
@@ -707,8 +707,7 @@ fun StudentHomeScreen(
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
-
+            // Đăng xuất
             Button(
                 onClick = onLogout,
                 modifier = Modifier.fillMaxWidth(0.7f).height(60.dp),
@@ -720,6 +719,8 @@ fun StudentHomeScreen(
         }
     }
 }
+
+
 
 
 
