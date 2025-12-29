@@ -11,6 +11,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -43,6 +45,7 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import com.example.mathforkids.ui.learning.LearningScreen
+import com.example.mathforkids.util.SettingsManager
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -142,7 +145,8 @@ fun AppNavigator() {
         composable(Screen.StudentHome.route) {
             StudentHomeScreen(
                 username = currentUserName,
-                onNavigateToLuyenTap = { navController.navigate(Screen.LevelSelection.route) },
+                onNavigateToLuyenTap = { navController.navigate(Screen.LevelSelection.createRoute(mode = "practice")) },
+                onNavigateToTest = { navController.navigate(Screen.LevelSelection.createRoute(mode = "test")) },
                 onNavigateToDashboard = {
                     dashboardUserId = currentUserId
                     navController.navigate(Screen.Dashboard.route)
@@ -169,7 +173,8 @@ fun AppNavigator() {
         composable(Screen.Menu.route) {
             MainMenuScreen(
                 username = currentUserName,
-                onNavigateToMath = { navController.navigate(Screen.LevelSelection.route) },
+                onNavigateToMath = { navController.navigate(Screen.LevelSelection.createRoute(mode = "practice")) },
+                onNavigateToTest = { navController.navigate(Screen.LevelSelection.createRoute(mode = "test")) },
                 onNavigateToDashboard = {
                     dashboardUserId = currentUserId
                     navController.navigate(Screen.Dashboard.route)
@@ -184,23 +189,28 @@ fun AppNavigator() {
 
         // --- LEVEL SELECTION ---
         composable(
-            route = "${Screen.LevelSelection.route}?gameType={gameType}",
-            arguments = listOf(navArgument("gameType") { type = NavType.StringType; nullable = true })
+            route = "${Screen.LevelSelection.route}&gameType={gameType}",
+            arguments = listOf(
+                navArgument("mode") { type = NavType.StringType; defaultValue = "practice" },
+                navArgument("gameType") { type = NavType.StringType; nullable = true }
+            )
         ) { backStackEntry ->
+            val mode = backStackEntry.arguments?.getString("mode") ?: "practice"
             val gameTypeStr = backStackEntry.arguments?.getString("gameType")
             val initialGameType =
                 if (gameTypeStr != null) try { com.example.mathforkids.model.GameType.valueOf(gameTypeStr) } catch (e: Exception) { null }
                 else null
 
             LevelSelectionScreen(
+                mode = mode,
                 completedLevels = completedLevels.toSet(),
                 initialGameType = initialGameType,
                 onLevelClick = { gameType, level ->
-                    navController.navigate(Screen.Game.createRoute(gameType.name, level))
+                    navController.navigate(Screen.Game.createRoute(gameType.name, level, mode))
                 },
                 onBack = {
                     if (initialGameType != null) {
-                        navController.navigate(Screen.LevelSelection.route) { popUpTo(Screen.LevelSelection.route) { inclusive = true } }
+                        navController.navigate(Screen.LevelSelection.createRoute(mode)) { popUpTo(Screen.LevelSelection.route) { inclusive = true } }
                     } else {
                         navController.navigate(Screen.StudentHome.route) { popUpTo(Screen.StudentHome.route) { inclusive = true } }
                     }
@@ -213,15 +223,39 @@ fun AppNavigator() {
             route = Screen.Game.route,
             arguments = listOf(
                 navArgument("gameType") { type = NavType.StringType },
-                navArgument("level") { type = NavType.IntType }
+                navArgument("level") { type = NavType.IntType },
+                navArgument("mode") { type = NavType.StringType; defaultValue = "practice" }
             )
         ) { backStackEntry ->
             val gameType = backStackEntry.arguments?.getString("gameType") ?: "COUNTING"
             val level = backStackEntry.arguments?.getInt("level") ?: 1
+            val mode = backStackEntry.arguments?.getString("mode") ?: "practice"
 
             GameScreen(
                 gameType = gameType,
                 level = level,
+                mode = mode,
+                onQuestionAnswered = { result ->
+                    if (mode == "test" && currentUserId != 0) {
+                         val score = if (result.totalQuestions > 0)
+                            (result.correctAnswers.toFloat() / result.totalQuestions) * 10
+                        else 0f
+
+                        val req = GameResultRequest(
+                            userId = currentUserId,
+                            gameType = gameType,
+                            levelId = level,
+                            score = score,
+                            correctCount = result.correctAnswers,
+                            totalQuestions = result.totalQuestions
+                        )
+                        // Fire and forget for intermediate results
+                        ApiService.create().saveResult(req).enqueue(object : Callback<BaseResponse<Any>> {
+                            override fun onResponse(call: Call<BaseResponse<Any>>, response: Response<BaseResponse<Any>>) {}
+                            override fun onFailure(call: Call<BaseResponse<Any>>, t: Throwable) {}
+                        })
+                    }
+                },
                 onComplete = { result ->
                     if (!completedLevels.contains(level)) completedLevels.add(level)
 
@@ -248,11 +282,11 @@ fun AppNavigator() {
                     }
 
                     if (gameType == "WRITING") {
-                        navController.navigate(Screen.LevelSelection.route) {
+                        navController.navigate(Screen.LevelSelection.createRoute(mode)) {
                             popUpTo(Screen.LevelSelection.route) { inclusive = true }
                         }
                     } else {
-                        navController.navigate("${Screen.LevelSelection.route}?gameType=$gameType") {
+                        navController.navigate("${Screen.LevelSelection.createRoute(mode)}&gameType=$gameType") {
                             popUpTo(Screen.LevelSelection.route) { inclusive = true }
                         }
                     }
@@ -642,16 +676,20 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onBack: () -> Unit) {
     }
 }
 
+
+
 @Composable
 fun StudentHomeScreen(
     username: String,
     onNavigateToLuyenTap: () -> Unit,
+    onNavigateToTest: () -> Unit,
     onNavigateToDashboard: () -> Unit,
     onNavigateToSettings: (() -> Unit)? = null,
     onNavigateToLearning: () -> Unit,
     onLogout: () -> Unit
 ) {
     val context = LocalContext.current
+    val fontScale = SettingsManager.fontScale
 
     Box(
         Modifier
@@ -659,63 +697,85 @@ fun StudentHomeScreen(
             .background(Brush.verticalGradient(listOf(Color(0xFFE1BEE7), Color(0xFFFFF8E1)))),
         contentAlignment = Alignment.Center
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Xin chào, $username 👋", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(40.dp))
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(vertical = 16.dp), // Add padding to avoid cutting off at edges
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text("Xin chào, $username 👋", fontSize = 28.sp * fontScale, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(30.dp))
 
-            Button(
-                onClick = onNavigateToLuyenTap,
-                modifier = Modifier.fillMaxWidth(0.7f).height(70.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
-                shape = RoundedCornerShape(50.dp)
-            ) {
-                Text("📚 Luyện tập", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            }
-
-            Spacer(Modifier.height(20.dp))
-
-            Button(
-                onClick = onNavigateToDashboard,
-                modifier = Modifier.fillMaxWidth(0.7f).height(70.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
-                shape = RoundedCornerShape(50.dp)
-            ) {
-                Text("📊 Xem kết quả", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            }
-
-            // ✅ NÚT MỚI: DẠY HỌC (giống style 3 nút kia)
-            Spacer(Modifier.height(20.dp))
+            // 1. HỌC TẬP
             Button(
                 onClick = onNavigateToLearning,
-                modifier = Modifier.fillMaxWidth(0.7f).height(70.dp),
+                modifier = Modifier.fillMaxWidth(0.7f).heightIn(min = 60.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800)),
                 shape = RoundedCornerShape(50.dp)
             ) {
-                Text("🎥 Học tập", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text("🎥 Học tập", fontSize = 22.sp * fontScale, fontWeight = FontWeight.Bold, color = Color.White)
             }
 
-            // Button Cài đặt
+            Spacer(Modifier.height(16.dp))
+
+            // 2. LUYỆN TẬP
+            Button(
+                onClick = onNavigateToLuyenTap,
+                modifier = Modifier.fillMaxWidth(0.7f).heightIn(min = 60.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                shape = RoundedCornerShape(50.dp)
+            ) {
+                Text("📚 Luyện tập", fontSize = 22.sp * fontScale, fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // 3. KIỂM TRA
+            Button(
+                onClick = onNavigateToTest,
+                modifier = Modifier.fillMaxWidth(0.7f).heightIn(min = 60.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE91E63)),
+                shape = RoundedCornerShape(50.dp)
+            ) {
+                Text("📝 Kiểm tra", fontSize = 22.sp * fontScale, fontWeight = FontWeight.Bold)
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            // 4. KẾT QUẢ
+            Button(
+                onClick = onNavigateToDashboard,
+                modifier = Modifier.fillMaxWidth(0.7f).heightIn(min = 60.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
+                shape = RoundedCornerShape(50.dp)
+            ) {
+                Text("📊 Xem kết quả", fontSize = 22.sp * fontScale, fontWeight = FontWeight.Bold)
+            }
+
+            // 5. CÀI ĐẶT
             if (onNavigateToSettings != null) {
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(16.dp))
                 Button(
                     onClick = onNavigateToSettings,
-                    modifier = Modifier.fillMaxWidth(0.7f).height(70.dp),
+                    modifier = Modifier.fillMaxWidth(0.7f).heightIn(min = 60.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0)),
                     shape = RoundedCornerShape(50.dp)
                 ) {
-                    Text("⚙️ Cài đặt", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("⚙️ Cài đặt", fontSize = 22.sp * fontScale, fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
 
             Button(
                 onClick = onLogout,
-                modifier = Modifier.fillMaxWidth(0.7f).height(60.dp),
+                modifier = Modifier.fillMaxWidth(0.7f).heightIn(min = 50.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
                 shape = RoundedCornerShape(50.dp)
             ) {
-                Text("Đăng xuất", fontSize = 20.sp, color = Color.White)
+                Text("Đăng xuất", fontSize = 18.sp * fontScale, color = Color.White)
             }
         }
     }
@@ -723,10 +783,18 @@ fun StudentHomeScreen(
 
 
 
-@Composable fun MainMenuScreen(username: String, onNavigateToMath: () -> Unit, onNavigateToDashboard: () -> Unit, onNavigateToLearning: () -> Unit, onLogout: () -> Unit) {
+@Composable fun MainMenuScreen(
+    username: String, 
+    onNavigateToMath: () -> Unit, 
+    onNavigateToTest: () -> Unit,
+    onNavigateToDashboard: () -> Unit, 
+    onNavigateToLearning: () -> Unit, 
+    onLogout: () -> Unit
+) {
     StudentHomeScreen(
         username = username, 
         onNavigateToLuyenTap = onNavigateToMath, 
+        onNavigateToTest = onNavigateToTest,
         onNavigateToDashboard = onNavigateToDashboard, 
         onNavigateToSettings = null,
         onNavigateToLearning= onNavigateToLearning,

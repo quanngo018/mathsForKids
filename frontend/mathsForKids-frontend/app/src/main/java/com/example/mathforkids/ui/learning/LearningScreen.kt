@@ -23,7 +23,10 @@ import androidx.compose.ui.unit.sp
 import coil.compose.rememberAsyncImagePainter
 import androidx.compose.ui.draw.clip
 import coil.compose.rememberAsyncImagePainter
-
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import com.example.mathforkids.util.SettingsManager
+import androidx.compose.ui.text.style.TextOverflow
 data class Lesson(val id: String, val title: String, val description: String)
 
 val lessons = listOf(
@@ -45,12 +48,41 @@ val lessons = listOf(
     Lesson("S8l7Na5xXLs", "Location - Kindergarten Math [OLM.VN]", "Học vị trí: trên, dưới, trái, phải trong không gian.")
 )
 
+
+
+
+
 @Composable
 fun LearningScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    val fontScale = SettingsManager.fontScale
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Danh sách bài học", fontSize = 28.sp, fontWeight = FontWeight.Bold)
+        // Header with Back Button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Button(
+                onClick = onBack,
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0)),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.size(48.dp * fontScale),
+                contentPadding = PaddingValues(0.dp)
+            ) { Text("←", fontSize = 24.sp * fontScale, color = Color.White, fontWeight = FontWeight.Bold) }
+
+            Spacer(Modifier.width(16.dp))
+
+            Text(
+                "Danh sách bài học",
+                fontSize = 28.sp * fontScale,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+        }
+        
         Spacer(Modifier.height(16.dp))
 
         LazyColumn(
@@ -90,7 +122,7 @@ fun LearningScreen(onBack: () -> Unit) {
                             modifier = Modifier
                                 .padding(16.dp)
                                 .align(Alignment.CenterHorizontally), // Căn giữa tên bài học
-                            fontSize = 22.sp, // Chữ to hơn
+                            fontSize = 22.sp * fontScale, // Chữ to hơn
                             fontWeight = FontWeight.ExtraBold,
                             color = Color(0xFF333333)
                         )

@@ -47,8 +47,10 @@ class TTSHelper(private val context: Context) {
     }
 
     fun speak(text: String) {
-        if (isInitialized && hasVietnamese) {
-            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+        if (SettingsManager.isSoundEnabled && isInitialized && hasVietnamese) {
+            val params = android.os.Bundle()
+            params.putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, SettingsManager.volume)
+            tts?.speak(text, TextToSpeech.QUEUE_FLUSH, params, null)
         }
     }
 

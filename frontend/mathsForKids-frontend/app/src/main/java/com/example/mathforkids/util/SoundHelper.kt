@@ -47,8 +47,10 @@ class SoundHelper(private val context: Context) {
      * Phát âm thanh khi trả lời đúng
      */
     fun playCorrectSound() {
+        if (!SettingsManager.isSoundEnabled) return
         try {
             correctSoundPlayer?.let { player ->
+                player.setVolume(SettingsManager.volume, SettingsManager.volume)
                 if (player.isPlaying) {
                     player.seekTo(0)
                 } else {
@@ -64,8 +66,10 @@ class SoundHelper(private val context: Context) {
      * Phát âm thanh khi trả lời sai
      */
     fun playWrongSound() {
+        if (!SettingsManager.isSoundEnabled) return
         try {
             wrongSoundPlayer?.let { player ->
+                player.setVolume(SettingsManager.volume, SettingsManager.volume)
                 if (player.isPlaying) {
                     player.seekTo(0)
                 } else {

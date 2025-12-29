@@ -18,6 +18,10 @@ import com.example.mathforkids.model.GameType
 import com.example.mathforkids.model.GameResult
 import com.example.mathforkids.util.rememberTTSHelper
 import com.example.mathforkids.util.rememberSoundHelper
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.BoxWithConstraints
+import com.example.mathforkids.util.SettingsManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -44,6 +48,8 @@ private val PERSON_NAMES = listOf("anh Quân", "anh Huy", "anh Nam")
 fun GameScreen(
     gameType: String,
     level: Int,
+    mode: String = "practice",
+    onQuestionAnswered: (GameResult) -> Unit = {},
     onComplete: (GameResult) -> Unit,
     onBack: () -> Unit
 ) {
@@ -54,6 +60,17 @@ fun GameScreen(
     var showCompletionDialog by remember { mutableStateOf(false) }
     val ttsHelper = rememberTTSHelper()
     val scope = rememberCoroutineScope()
+
+    // Timer for Test mode
+    var timerSeconds by remember { mutableStateOf(0) }
+    LaunchedEffect(mode, isGameOver, showCompletionDialog) {
+        if (mode == "test" && !isGameOver && !showCompletionDialog) {
+            while (true) {
+                delay(1000)
+                timerSeconds++
+            }
+        }
+    }
 
     // Key làm mới câu hỏi (luôn đổi => fix "dơ" UI)
     val questionIndex = correctCount + incorrectCount
@@ -71,26 +88,64 @@ fun GameScreen(
         }
     }
 
-    // Kiểm tra hoàn thành level (3 câu đúng)
-    LaunchedEffect(correctCount) {
-        if (correctCount >= 3 && !showCompletionDialog && !isGameOver) {
-            showCompletionDialog = true  // Set ngay lập tức để chặn câu hỏi mới
-            ttsHelper.stop()  // Dừng âm thanh hiện tại ngay lập tức
-            delay(100)  // Delay nhỏ để đảm bảo stop() hoàn tất
-            ttsHelper.speak("Chúc mừng bé đã hoàn thành!")
-            delay(2000)
+    // Logic xử lý khi trả lời xong 1 câu
+    fun onAnswer(isCorrect: Boolean) {
+        if (isCorrect) correctCount++ else incorrectCount++
+        
+        if (mode == "practice") {
+            // Practice: No lives lost
+        } else if (mode == "test") {
+            // Test: No lives lost, just count
+            val result = GameResult(
+                correctAnswers = correctCount,
+                totalQuestions = correctCount + incorrectCount,
+                gameType = type,
+                level = level
+            )
+            onQuestionAnswered(result)
+        } else {
+            // Normal mode (if any): Lose lives
+            if (!isCorrect && lives > 0) lives--
         }
     }
 
-    // Kiểm tra hết mạng
-    LaunchedEffect(lives) {
-        if (lives <= 0 && !showCompletionDialog && !isGameOver) {
-            isGameOver = true
-            showCompletionDialog = true  // Set ngay lập tức để chặn câu hỏi mới
-            ttsHelper.stop()  // Dừng âm thanh hiện tại ngay lập tức
-            delay(100)  // Delay nhỏ để đảm bảo stop() hoàn tất
-            ttsHelper.speak("Hết lượt chơi rồi! Cố gắng ở lần sau bé nhé!")
-            delay(2000)
+    // Kiểm tra hoàn thành
+    LaunchedEffect(correctCount, incorrectCount, lives) {
+        if (showCompletionDialog || isGameOver) return@LaunchedEffect
+
+        if (mode == "test") {
+            if (correctCount + incorrectCount >= 10) {
+                showCompletionDialog = true
+                ttsHelper.stop()
+                delay(100)
+                ttsHelper.speak("Đã hoàn thành bài kiểm tra!")
+                delay(2000)
+            }
+        } else if (mode == "practice") {
+             // Practice: Maybe endless? Or 10 questions? Or 3 correct?
+             // User said "tập luyện thoải mái". Let's keep it endless or user exits manually.
+             // But maybe we should give some feedback after some questions?
+             // Let's stick to "Endless" but maybe show a dialog every 5 correct answers?
+             // Or just let them play.
+             // Existing logic was 3 correct. Let's keep it simple: Endless.
+             // But wait, if it's endless, how do they finish? Back button.
+             // If I remove the completion check, it's endless.
+        } else {
+            // Normal logic (Legacy or if mode is not specified correctly)
+            if (correctCount >= 3) {
+                showCompletionDialog = true
+                ttsHelper.stop()
+                delay(100)
+                ttsHelper.speak("Chúc mừng bé đã hoàn thành!")
+                delay(2000)
+            } else if (lives <= 0) {
+                isGameOver = true
+                showCompletionDialog = true
+                ttsHelper.stop()
+                delay(100)
+                ttsHelper.speak("Hết lượt chơi rồi! Cố gắng ở lần sau bé nhé!")
+                delay(2000)
+            }
         }
     }
 
@@ -100,62 +155,63 @@ fun GameScreen(
                 level = level,
                 key = questionIndex,
                 lives = lives,
+                mode = mode,
+                timerSeconds = timerSeconds,
+                score = correctCount,
+                total = correctCount + incorrectCount,
                 isGameOver = isGameOver,
                 showCompletionDialog = showCompletionDialog,
-                onCorrect = { correctCount++ },
-                onIncorrect = { 
-                    incorrectCount++
-                    if (lives > 0) lives--
-                },
+                onCorrect = { onAnswer(true) },
+                onIncorrect = { onAnswer(false) },
                 onBack = onBack
             )
             GameType.ADDITION -> AdditionGameScreen(
                 level = level,
                 key = questionIndex,
                 lives = lives,
+                mode = mode,
+                timerSeconds = timerSeconds,
+                score = correctCount,
+                total = correctCount + incorrectCount,
                 isGameOver = isGameOver,
                 showCompletionDialog = showCompletionDialog,
-                onCorrect = { correctCount++ },
-                onIncorrect = { 
-                    incorrectCount++
-                    if (lives > 0) lives--
-                },
+                onCorrect = { onAnswer(true) },
+                onIncorrect = { onAnswer(false) },
                 onBack = onBack
             )
             GameType.SUBTRACTION -> SubtractionGameScreen(
                 level = level,
                 key = questionIndex,
                 lives = lives,
+                mode = mode,
+                timerSeconds = timerSeconds,
+                score = correctCount,
+                total = correctCount + incorrectCount,
                 isGameOver = isGameOver,
                 showCompletionDialog = showCompletionDialog,
-                onCorrect = { correctCount++ },
-                onIncorrect = { 
-                    incorrectCount++
-                    if (lives > 0) lives--
-                },
+                onCorrect = { onAnswer(true) },
+                onIncorrect = { onAnswer(false) },
                 onBack = onBack
             )
             GameType.MATCHING -> MatchingGameScreen(
                 level = level,
                 key = questionIndex,
                 lives = lives,
+                mode = mode,
+                timerSeconds = timerSeconds,
+                score = correctCount,
+                total = correctCount + incorrectCount,
                 isGameOver = isGameOver,
                 showCompletionDialog = showCompletionDialog,
-                onCorrect = { correctCount++ },
-                onIncorrect = { 
-                    incorrectCount++
-                    if (lives > 0) lives--
-                },
+                onCorrect = { onAnswer(true) },
+                onIncorrect = { onAnswer(false) },
                 onBack = onBack
             )
 
             GameType.WRITING -> WritingPracticeGame(
                 level = level,
-                onCorrect = { correctCount++ },
-                onIncorrect = { 
-                    incorrectCount++
-                    if (lives > 0) lives--
-                },
+                onCorrect = { onAnswer(true) },
+                onIncorrect = { onAnswer(false) },
                 onBack = onBack
             )
         }
@@ -168,9 +224,6 @@ fun GameScreen(
                 stars = if (isGameOver) 0 else if (incorrectCount == 0) 3 else if (incorrectCount <= 2) 2 else 1,
                 onContinue = {
                     if (!isGameOver) {
-                        // KHÔNG set showCompletionDialog = false ở đây
-                        // Vì nếu set false, UI sẽ render lại game screen và trigger TTS đọc câu hỏi mới
-                        // Thay vào đó, giữ nguyên dialog và gọi callback onComplete
                         scope.launch {
                             val total = correctCount + incorrectCount
                             val result = GameResult(
@@ -182,7 +235,6 @@ fun GameScreen(
                             onComplete(result)
                         }
                     } else {
-                        // Game over: quay lại
                         onBack()
                     }
                 },
@@ -192,6 +244,7 @@ fun GameScreen(
                     incorrectCount = 0
                     lives = 3
                     isGameOver = false
+                    timerSeconds = 0
                 },
                 onBack = {
                     showCompletionDialog = false
@@ -365,7 +418,20 @@ private fun OperatorText(op: String, color: Color) {
 
 // ----------------------------- COUNTING -----------------------------
 @Composable
-fun CountingGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, showCompletionDialog: Boolean, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
+fun CountingGameScreen(
+    level: Int, 
+    key: Int, 
+    lives: Int, 
+    mode: String = "practice",
+    timerSeconds: Int = 0,
+    score: Int = 0,
+    total: Int = 0,
+    isGameOver: Boolean, 
+    showCompletionDialog: Boolean, 
+    onCorrect: () -> Unit, 
+    onIncorrect: () -> Unit, 
+    onBack: () -> Unit
+) {
     val range = getLevelRange(level)
     val number = remember(key) { range.random() }
     val icon = remember(key) { GAME_ICONS.random() }
@@ -374,6 +440,10 @@ fun CountingGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, sh
     BaseGameLayout(
         title = "Bé hãy đếm xem có bao nhiêu ${icon.name} nhé",
         lives = lives,
+        mode = mode,
+        timerSeconds = timerSeconds,
+        score = score,
+        total = total,
         isGameOver = isGameOver,
         showCompletionDialog = showCompletionDialog,
         content = {
@@ -392,7 +462,20 @@ fun CountingGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, sh
 
 // ----------------------------- ADDITION -----------------------------
 @Composable
-fun AdditionGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, showCompletionDialog: Boolean, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
+fun AdditionGameScreen(
+    level: Int, 
+    key: Int, 
+    lives: Int, 
+    mode: String = "practice",
+    timerSeconds: Int = 0,
+    score: Int = 0,
+    total: Int = 0,
+    isGameOver: Boolean, 
+    showCompletionDialog: Boolean, 
+    onCorrect: () -> Unit, 
+    onIncorrect: () -> Unit, 
+    onBack: () -> Unit
+) {
     val range = getOperationRange(level)
     
     val a = remember(key) { range.random() }
@@ -412,6 +495,10 @@ fun AdditionGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, sh
     BaseGameLayout(
         title = questionText,
         lives = lives,
+        mode = mode,
+        timerSeconds = timerSeconds,
+        score = score,
+        total = total,
         isGameOver = isGameOver,
         showCompletionDialog = showCompletionDialog,
         content = {
@@ -439,7 +526,20 @@ fun AdditionGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, sh
 
 // ----------------------------- SUBTRACTION (A − B = CÒN LẠI) -----------------------------
 @Composable
-fun SubtractionGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, showCompletionDialog: Boolean, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
+fun SubtractionGameScreen(
+    level: Int, 
+    key: Int, 
+    lives: Int, 
+    mode: String = "practice",
+    timerSeconds: Int = 0,
+    score: Int = 0,
+    total: Int = 0,
+    isGameOver: Boolean, 
+    showCompletionDialog: Boolean, 
+    onCorrect: () -> Unit, 
+    onIncorrect: () -> Unit, 
+    onBack: () -> Unit
+) {
     val range = getOperationRange(level)
     
     val a = remember(key) { (range.first + 2..range.last).random() }
@@ -459,6 +559,10 @@ fun SubtractionGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean,
     BaseGameLayout(
         title = questionText,
         lives = lives,
+        mode = mode,
+        timerSeconds = timerSeconds,
+        score = score,
+        total = total,
         isGameOver = isGameOver,
         showCompletionDialog = showCompletionDialog,
         content = {
@@ -488,7 +592,20 @@ fun SubtractionGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean,
 
 // ----------------------------- MATCHING -----------------------------
 @Composable
-fun MatchingGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, showCompletionDialog: Boolean, onCorrect: () -> Unit, onIncorrect: () -> Unit, onBack: () -> Unit) {
+fun MatchingGameScreen(
+    level: Int, 
+    key: Int, 
+    lives: Int, 
+    mode: String = "practice",
+    timerSeconds: Int = 0,
+    score: Int = 0,
+    total: Int = 0,
+    isGameOver: Boolean, 
+    showCompletionDialog: Boolean, 
+    onCorrect: () -> Unit, 
+    onIncorrect: () -> Unit, 
+    onBack: () -> Unit
+) {
     val actualLevel = getDifficulty(level)
     // Matching game: số có 2 chữ số, tăng dần theo level
     val range = when {
@@ -503,6 +620,10 @@ fun MatchingGameScreen(level: Int, key: Int, lives: Int, isGameOver: Boolean, sh
     BaseGameLayout(
         title = "Tìm số giống số này:",
         lives = lives,
+        mode = mode,
+        timerSeconds = timerSeconds,
+        score = score,
+        total = total,
         isGameOver = isGameOver,
         showCompletionDialog = showCompletionDialog,
         content = {
@@ -541,6 +662,10 @@ fun generateOptions(correct: Int, range: IntRange): List<Int> {
 fun BaseGameLayout(
     title: String,
     lives: Int,
+    mode: String = "practice",
+    timerSeconds: Int = 0,
+    score: Int = 0,
+    total: Int = 0,
     isGameOver: Boolean,
     showCompletionDialog: Boolean,
     content: @Composable () -> Unit,
@@ -555,6 +680,7 @@ fun BaseGameLayout(
     val soundHelper = rememberSoundHelper()
     var answered by remember { mutableStateOf(false) }
     var selectedAnswer by remember { mutableStateOf<Int?>(null) }
+    val fontScale = SettingsManager.fontScale
 
     // ✅ FIX CHÍNH: reset theo questionKey (không phụ thuộc correctAnswer có trùng hay không)
     LaunchedEffect(questionKey) {
@@ -593,19 +719,7 @@ fun BaseGameLayout(
         }
     }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xFFF7FBFF), Color(0xFFFFFFFF))
-                )
-            )
-            .padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        // Header với back button, lives và speaker button
+    val Header = @Composable {
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -615,20 +729,44 @@ fun BaseGameLayout(
                 onClick = onBack,
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0)),
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier.size(48.dp * fontScale),
                 contentPadding = PaddingValues(0.dp)
-            ) { Text("←", fontSize = 24.sp, color = Color.White, fontWeight = FontWeight.Bold) }
+            ) { Text("←", fontSize = 24.sp * fontScale, color = Color.White, fontWeight = FontWeight.Bold) }
             
-            // Hiển thị lives (3 trái tim)
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                repeat(3) { index ->
+            if (mode == "test") {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        if (index < lives) "❤️" else "🤍",
-                        fontSize = 28.sp
+                        "⏱️ %02d:%02d".format(timerSeconds / 60, timerSeconds % 60),
+                        fontSize = 20.sp * fontScale,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFE91E63)
                     )
+                    Text(
+                        "Điểm: $score/$total",
+                        fontSize = 18.sp * fontScale,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF2196F3)
+                    )
+                }
+            } else if (mode == "practice") {
+                Text(
+                    "Luyện tập",
+                    fontSize = 24.sp * fontScale,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF4CAF50)
+                )
+            } else {
+                // Hiển thị lives (3 trái tim) - Legacy mode
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    repeat(3) { index ->
+                        Text(
+                            if (index < lives) "❤️" else "🤍",
+                            fontSize = 28.sp * fontScale
+                        )
+                    }
                 }
             }
             
@@ -637,15 +775,17 @@ fun BaseGameLayout(
                 onClick = { ttsHelper.speak(title) },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier.size(48.dp * fontScale),
                 contentPadding = PaddingValues(0.dp)
-            ) { Text("🔊", fontSize = 24.sp) }
+            ) { Text("🔊", fontSize = 24.sp * fontScale) }
         }
+    }
 
-        Text(title, fontSize = 22.sp, fontWeight = FontWeight.Medium)
+    val Title = @Composable {
+        Text(title, fontSize = 22.sp * fontScale, fontWeight = FontWeight.Medium)
+    }
 
-        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { content() }
-
+    val Options = @Composable {
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             options.forEach { option ->
                 val color = if (answered) {
@@ -656,12 +796,54 @@ fun BaseGameLayout(
 
                 Button(
                     onClick = { if (!answered) { selectedAnswer = option; answered = true } },
-                    modifier = Modifier.fillMaxWidth().height(60.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp * fontScale),
                     colors = ButtonDefaults.buttonColors(containerColor = color),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text("$option", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+                    Text("$option", fontSize = 24.sp * fontScale, fontWeight = FontWeight.Bold)
                 }
+            }
+        }
+    }
+
+    BoxWithConstraints(
+        Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    listOf(Color(0xFFF7FBFF), Color(0xFFFFFFFF))
+                )
+            )
+    ) {
+        // Use scroll if screen is small OR font is large
+        val useScroll = maxHeight < 600.dp || fontScale > 1.1f
+
+        if (useScroll) {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Header()
+                Title()
+                Box(Modifier.heightIn(min = 200.dp).fillMaxWidth(), contentAlignment = Alignment.Center) { content() }
+                Options()
+            }
+        } else {
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
+            ) {
+                Header()
+                Title()
+                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { content() }
+                Options()
             }
         }
     }

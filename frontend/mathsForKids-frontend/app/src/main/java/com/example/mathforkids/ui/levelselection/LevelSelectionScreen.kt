@@ -32,6 +32,7 @@ import com.example.mathforkids.model.LevelPosition
  */
 @Composable
 fun LevelSelectionScreen(
+    mode: String = "practice",
     completedLevels: Set<Int>,
     initialGameType: GameType? = null,
     onLevelClick: (GameType, Int) -> Unit,
@@ -55,25 +56,108 @@ fun LevelSelectionScreen(
                 )
             )
     ) {
-        if (selectedGameType == null) {
-            // 1. Nếu chưa chọn game -> Hiện Menu chọn chế độ
-            ModeSelectionView(
-                onModeSelected = { selectedGameType = it },
-                onLevelClick = onLevelClick, // Truyền hàm này vào để xử lý game Tập viết
+        if (mode == "test") {
+            TestSelectionView(
+                onTestSelected = { gameType, level -> onLevelClick(gameType, level) },
                 onBack = onBack
             )
         } else {
-            // 2. Các game khác -> Hiện bản đồ Level (Map)
-            // Lưu ý: Game WRITING sẽ không bao giờ vào đây vì đã được xử lý ở ModeSelectionView
-            LevelMapView(
-                gameType = selectedGameType!!,
-                completedLevels = completedLevels,
-                onLevelClick = onLevelClick,
-                onBack = { selectedGameType = null }
-            )
+            if (selectedGameType == null) {
+                // 1. Nếu chưa chọn game -> Hiện Menu chọn chế độ
+                ModeSelectionView(
+                    onModeSelected = { selectedGameType = it },
+                    onLevelClick = onLevelClick, // Truyền hàm này vào để xử lý game Tập viết
+                    onBack = onBack
+                )
+            } else {
+                // 2. Các game khác -> Hiện bản đồ Level (Map)
+                // Lưu ý: Game WRITING sẽ không bao giờ vào đây vì đã được xử lý ở ModeSelectionView
+                LevelMapView(
+                    gameType = selectedGameType!!,
+                    completedLevels = completedLevels,
+                    onLevelClick = onLevelClick,
+                    onBack = { selectedGameType = null }
+                )
+            }
         }
     }
 }
+
+@Composable
+fun TestSelectionView(
+    onTestSelected: (GameType, Int) -> Unit,
+    onBack: () -> Unit
+) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        LevelSelectionHeader(onBack = onBack, title = "Chọn bài kiểm tra")
+
+        Spacer(modifier = Modifier.height(40.dp))
+
+        // Các số
+        TestButton(
+            title = "Các số",
+            subtitle = "Nhận biết số đếm",
+            color = Color(0xFF4CAF50),
+            onClick = { onTestSelected(GameType.COUNTING, 1) }
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Phép toán 1-3
+        TestButton(
+            title = "Phép toán 1-3",
+            subtitle = "Cộng trừ phạm vi nhỏ",
+            color = Color(0xFF2196F3),
+            onClick = { onTestSelected(GameType.ADDITION, 1) }
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Phép toán 3-6
+        TestButton(
+            title = "Phép toán 3-6",
+            subtitle = "Cộng trừ phạm vi trung bình",
+            color = Color(0xFFFF9800),
+            onClick = { onTestSelected(GameType.ADDITION, 4) }
+        )
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Phép toán 6-10
+        TestButton(
+            title = "Phép toán 6-10",
+            subtitle = "Thử thách lớn hơn",
+            color = Color(0xFFE91E63),
+            onClick = { onTestSelected(GameType.ADDITION, 10) }
+        )
+    }
+}
+
+@Composable
+fun TestButton(
+    title: String,
+    subtitle: String,
+    color: Color,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth(0.8f)
+            .height(80.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = color),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(text = title, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Text(text = subtitle, fontSize = 14.sp, color = Color.White.copy(alpha = 0.8f))
+        }
+    }
+}
+
 
 @Composable
 fun ModeSelectionView(
