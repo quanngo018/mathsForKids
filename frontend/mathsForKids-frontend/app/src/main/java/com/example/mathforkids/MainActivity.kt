@@ -257,9 +257,10 @@ fun AppNavigator() {
                     }
                 },
                 onComplete = { result ->
+                    // Add completed level to the list
                     if (!completedLevels.contains(level)) completedLevels.add(level)
 
-                    if (currentUserId != 0) {
+                    if (currentUserId != 0 && mode == "test") {
                         val score = if (result.totalQuestions > 0)
                             (result.correctAnswers.toFloat() / result.totalQuestions) * 10
                         else 0f
