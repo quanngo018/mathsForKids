@@ -1,18 +1,11 @@
 package com.example.mathforkids
 
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -45,7 +38,11 @@ import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import com.example.mathforkids.ui.learning.LearningScreen
-import com.example.mathforkids.util.SettingsManager
+import androidx.compose.foundation.border
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.style.TextAlign
+
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -237,7 +234,7 @@ fun AppNavigator() {
                 mode = mode,
                 onQuestionAnswered = { result ->
                     if (mode == "test" && currentUserId != 0) {
-                         val score = if (result.totalQuestions > 0)
+                        val score = if (result.totalQuestions > 0)
                             (result.correctAnswers.toFloat() / result.totalQuestions) * 10
                         else 0f
 
@@ -257,9 +254,10 @@ fun AppNavigator() {
                     }
                 },
                 onComplete = { result ->
+                    // Add completed level to the list
                     if (!completedLevels.contains(level)) completedLevels.add(level)
 
-                    if (currentUserId != 0) {
+                    if (currentUserId != 0 && mode == "test") {
                         val score = if (result.totalQuestions > 0)
                             (result.correctAnswers.toFloat() / result.totalQuestions) * 10
                         else 0f
@@ -301,7 +299,7 @@ fun AppNavigator() {
         composable(Screen.AdminHome.route) {
             AdminHomeScreen(username = currentUserName, onLogout = { navController.navigate(Screen.Login.route) })
         }
-        
+
         // --- SETTINGS SCREEN ---
         composable(Screen.Settings.route) {
             com.example.mathforkids.ui.settings.SettingsScreen(
@@ -309,7 +307,7 @@ fun AppNavigator() {
                 onNavigateToTTSTest = { navController.navigate(Screen.TTSTest.route) }
             )
         }
-        
+
         // --- TTS TEST SCREEN ---
         composable(Screen.TTSTest.route) {
             com.example.mathforkids.ui.test.TTSTestScreen(
@@ -531,7 +529,7 @@ fun LoginScreen(
         )
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.offset(y = (-50).dp).padding(30.dp)) {
             Text("Đăng nhập", fontSize = 32.sp, fontWeight = FontWeight.Bold)
-            
+
             // Hiển thị badge offline mode nếu đang bật
             if (offlineMode) {
                 Spacer(Modifier.height(8.dp))
@@ -548,7 +546,7 @@ fun LoginScreen(
                     )
                 }
             }
-            
+
             Spacer(Modifier.height(20.dp))
             OutlinedTextField(value = username, onValueChange = { username = it }, label = { Text("Tên đăng nhập") })
             Spacer(Modifier.height(10.dp))
@@ -572,7 +570,7 @@ fun LoginScreen(
                     ))
                     return@Button
                 }
-                
+
                 // Nếu không phải tài khoản offline, gọi API
                 offlineMode = false
                 ApiService.create().login(LoginRequest(username, password)).enqueue(object : Callback<BaseResponse<UserData>> {
@@ -584,13 +582,13 @@ fun LoginScreen(
                             error = response.body()?.message ?: "Lỗi"
                         }
                     }
-                    override fun onFailure(call: Call<BaseResponse<UserData>>, t: Throwable) { 
+                    override fun onFailure(call: Call<BaseResponse<UserData>>, t: Throwable) {
                         error = "Lỗi kết nối - Thử dùng tài khoản offline (hs/1)"
                     }
                 })
             }, modifier = Modifier.fillMaxWidth()) { Text("Đăng nhập") }
             if (error.isNotEmpty()) Text(error, color = Color.Red, fontSize = 12.sp)
-            
+
             // Hint về tài khoản offline
             /*
             Spacer(Modifier.height(8.dp))
@@ -678,6 +676,7 @@ fun RegisterScreen(onRegisterSuccess: () -> Unit, onBack: () -> Unit) {
 
 
 
+
 @Composable
 fun StudentHomeScreen(
     username: String,
@@ -688,118 +687,133 @@ fun StudentHomeScreen(
     onNavigateToLearning: () -> Unit,
     onLogout: () -> Unit
 ) {
-    val context = LocalContext.current
-    val fontScale = SettingsManager.fontScale
+    // Tạm thời để 1.0f nếu SettingsManager báo lỗi
+    val fontScale = 1.0f
+    val bgColorTop = Color(0xFFFFF8E1)
+    val bgColorBottom = Color(0xFFB3E5FC)
+    val orangeKid = Color(0xFFFFAB40)
+    val greenKid = Color(0xFF66BB6A)
+    val pinkKid = Color(0xFFF06292)
+    val blueKid = Color(0xFF42A5F5)
 
     Box(
         Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color(0xFFE1BEE7), Color(0xFFFFF8E1)))),
-        contentAlignment = Alignment.Center
+            .background(Brush.verticalGradient(listOf(bgColorTop, bgColorBottom)))
+            .padding(20.dp)
     ) {
+        if (onNavigateToSettings != null) {
+            IconButton(
+                onClick = onNavigateToSettings,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 10.dp)
+                    .size(60.dp)
+                    .border(2.dp, Color(0xFF5D4037).copy(alpha = 0.7f), CircleShape)
+                    .background(Color.White.copy(alpha = 0.6f), CircleShape)
+            ) {
+                Text("⚙️", fontSize = 28.sp * fontScale)
+            }
+        }
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(vertical = 16.dp), // Add padding to avoid cutting off at edges
+                .padding(top = 80.dp)
+        ) {
+            Text(
+                "Xin chào bé,\n$username! 👋",
+                fontSize = 32.sp * fontScale,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color(0xFF5D4037),
+                textAlign = TextAlign.Center,
+                lineHeight = 38.sp * fontScale
+            )
+
+            Spacer(Modifier.height(60.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                KidActivityCard("Học tập", "📖", orangeKid, fontScale, Modifier.weight(1f), onNavigateToLearning)
+                KidActivityCard("Luyện tập", "📚", greenKid, fontScale, Modifier.weight(1f), onNavigateToLuyenTap)
+            }
+
+            Spacer(Modifier.height(20.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                KidActivityCard("Kiểm tra", "📝", pinkKid, fontScale, Modifier.weight(1f), onNavigateToTest)
+                KidActivityCard("Kết quả", "📊", blueKid, fontScale, Modifier.weight(1f), onNavigateToDashboard)
+            }
+
+            Spacer(Modifier.weight(1f))
+        }
+
+        OutlinedButton(
+            onClick = onLogout,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = 30.dp)
+                .fillMaxWidth(0.6f),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
+            border = androidx.compose.foundation.BorderStroke(2.dp, Color.Red.copy(alpha = 0.6f)),
+            shape = RoundedCornerShape(30.dp)
+        ) {
+            Text("Đăng xuất", fontSize = 18.sp * fontScale, fontWeight = FontWeight.Medium)
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun KidActivityCard(
+    text: String,
+    iconEmoji: String,
+    backgroundColor: Color,
+    fontScale: Float,
+    modifier: Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        onClick = onClick,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = backgroundColor),
+        modifier = modifier.aspectRatio(1f)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("Xin chào, $username 👋", fontSize = 28.sp * fontScale, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(30.dp))
-
-            // 1. HỌC TẬP
-            Button(
-                onClick = onNavigateToLearning,
-                modifier = Modifier.fillMaxWidth(0.7f).heightIn(min = 60.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800)),
-                shape = RoundedCornerShape(50.dp)
-            ) {
-                Text("🎥 Học tập", fontSize = 22.sp * fontScale, fontWeight = FontWeight.Bold, color = Color.White)
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            // 2. LUYỆN TẬP
-            Button(
-                onClick = onNavigateToLuyenTap,
-                modifier = Modifier.fillMaxWidth(0.7f).heightIn(min = 60.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
-                shape = RoundedCornerShape(50.dp)
-            ) {
-                Text("📚 Luyện tập", fontSize = 22.sp * fontScale, fontWeight = FontWeight.Bold)
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            // 3. KIỂM TRA
-            Button(
-                onClick = onNavigateToTest,
-                modifier = Modifier.fillMaxWidth(0.7f).heightIn(min = 60.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE91E63)),
-                shape = RoundedCornerShape(50.dp)
-            ) {
-                Text("📝 Kiểm tra", fontSize = 22.sp * fontScale, fontWeight = FontWeight.Bold)
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            // 4. KẾT QUẢ
-            Button(
-                onClick = onNavigateToDashboard,
-                modifier = Modifier.fillMaxWidth(0.7f).heightIn(min = 60.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3)),
-                shape = RoundedCornerShape(50.dp)
-            ) {
-                Text("📊 Xem kết quả", fontSize = 22.sp * fontScale, fontWeight = FontWeight.Bold)
-            }
-
-            // 5. CÀI ĐẶT
-            if (onNavigateToSettings != null) {
-                Spacer(Modifier.height(16.dp))
-                Button(
-                    onClick = onNavigateToSettings,
-                    modifier = Modifier.fillMaxWidth(0.7f).heightIn(min = 60.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0)),
-                    shape = RoundedCornerShape(50.dp)
-                ) {
-                    Text("⚙️ Cài đặt", fontSize = 22.sp * fontScale, fontWeight = FontWeight.Bold, color = Color.White)
-                }
-            }
-
-            Spacer(Modifier.height(16.dp))
-
-            Button(
-                onClick = onLogout,
-                modifier = Modifier.fillMaxWidth(0.7f).heightIn(min = 50.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
-                shape = RoundedCornerShape(50.dp)
-            ) {
-                Text("Đăng xuất", fontSize = 18.sp * fontScale, color = Color.White)
-            }
+            Text(text = iconEmoji, fontSize = 40.sp * fontScale)
+            Text(text = text, color = Color.White, fontWeight = FontWeight.Bold)
         }
     }
 }
 
 
-
 @Composable fun MainMenuScreen(
-    username: String, 
-    onNavigateToMath: () -> Unit, 
+    username: String,
+    onNavigateToMath: () -> Unit,
     onNavigateToTest: () -> Unit,
-    onNavigateToDashboard: () -> Unit, 
-    onNavigateToLearning: () -> Unit, 
+    onNavigateToDashboard: () -> Unit,
+    onNavigateToLearning: () -> Unit,
     onLogout: () -> Unit
 ) {
     StudentHomeScreen(
-        username = username, 
-        onNavigateToLuyenTap = onNavigateToMath, 
+        username = username,
+        onNavigateToLuyenTap = onNavigateToMath,
         onNavigateToTest = onNavigateToTest,
-        onNavigateToDashboard = onNavigateToDashboard, 
+        onNavigateToDashboard = onNavigateToDashboard,
         onNavigateToSettings = null,
         onNavigateToLearning= onNavigateToLearning,
         onLogout = onLogout
-    ) 
+    )
 }
 @Composable fun TeacherHomeScreen(username: String, onLogout: () -> Unit) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Column { Text("Giáo viên: $username"); Button(onClick = onLogout) { Text("Đăng xuất") } } } }
 @Composable fun AdminHomeScreen(username: String, onLogout: () -> Unit) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Column { Text("Admin: $username"); Button(onClick = onLogout) { Text("Đăng xuất") } } } }
