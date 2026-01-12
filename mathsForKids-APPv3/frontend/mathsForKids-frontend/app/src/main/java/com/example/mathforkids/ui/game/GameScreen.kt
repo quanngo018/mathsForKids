@@ -94,7 +94,7 @@ fun GameScreen(
         if (isCorrect) {
             correctCount++
             if (mode == "practice") {
-                xp += 100
+                xp += 1
             }
         } else {
             incorrectCount++
@@ -134,7 +134,7 @@ fun GameScreen(
                 delay(2000)
             }
         } else if (mode == "practice") {
-            if (xp >= 1000) {
+            if (xp >= 10) {
                 showCompletionDialog = true
                 ttsHelper.stop()
                 delay(100)
@@ -399,18 +399,55 @@ private fun EmojiGrid(
     emoji: String,
     perRow: Int = 6,
     tint: (Int) -> Color = { Color.Unspecified },
-    sizeSp: Int = 36
+    sizeSp: Int = 56
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         val rows = (count + perRow - 1) / perRow
+        
+        // ✅ Tự động scale kích thước - tính toán dựa trên số lượng thực tế trên mỗi hàng
+        val maxItemsInRow = minOf(count, perRow)
+        
+        // Tính kích thước cơ bản dựa trên số item trên hàng và tổng số lượng
+        val baseSize = when {
+            count == 1 -> 80.coerceAtMost(sizeSp)      // 1 icon: cực to
+            count == 2 -> 70.coerceAtMost(sizeSp)      // 2 icon: rất to
+            count == 3 -> 62.coerceAtMost(sizeSp)      // 3 icon: to
+            count <= 5 -> 54.coerceAtMost(sizeSp)      // 4-5 icon: to vừa
+            count <= 8 -> 48.coerceAtMost(sizeSp)      // 6-8 icon: vừa
+            count <= 12 -> 42.coerceAtMost(sizeSp)     // 9-12 icon: vừa nhỏ
+            count <= 18 -> 38.coerceAtMost(sizeSp)     // 13-18 icon: nhỏ
+            count <= 24 -> 34.coerceAtMost(sizeSp)     // 19-24 icon: nhỏ hơn
+            count <= 30 -> 30.coerceAtMost(sizeSp)     // 25-30 icon: rất nhỏ
+            else -> 26.coerceAtMost(sizeSp)            // 31+ icon: cực nhỏ
+        }
+        
+        // Điều chỉnh thêm dựa trên số hàng để tránh tràn theo chiều dọc
+        val rowAdjustedSize = when {
+            rows > 5 -> (baseSize * 0.75f).toInt()      // >5 hàng: giảm 25%
+            rows > 4 -> (baseSize * 0.82f).toInt()      // >4 hàng: giảm 18%
+            rows > 3 -> (baseSize * 0.88f).toInt()      // >3 hàng: giảm 12%
+            rows > 2 -> (baseSize * 0.94f).toInt()      // >2 hàng: giảm 6%
+            else -> baseSize
+        }
+        
+        // Điều chỉnh thêm dựa trên số icon trên mỗi hàng để tránh tràn theo chiều ngang
+        val finalSize = when {
+            maxItemsInRow >= 6 -> (rowAdjustedSize * 0.90f).toInt()  // 6+ icon/hàng: giảm 10%
+            maxItemsInRow >= 5 -> (rowAdjustedSize * 0.95f).toInt()  // 5 icon/hàng: giảm 5%
+            else -> rowAdjustedSize
+        }
+        
+        // Đảm bảo không quá nhỏ (tối thiểu 20sp)
+        val safeSize = maxOf(finalSize, 20)
+        
         repeat(rows) { r ->
             Row(horizontalArrangement = Arrangement.Center) {
                 for (i in (r * perRow) until minOf((r * perRow) + perRow, count)) {
                     Text(
                         emoji,
-                        fontSize = sizeSp.sp,
+                        fontSize = safeSize.sp,
                         color = tint(i),
-                        modifier = Modifier.padding(4.dp)
+                        modifier = Modifier.padding(3.dp)  // Giảm padding từ 4dp xuống 3dp
                     )
                 }
             }
@@ -487,7 +524,7 @@ fun CountingGameScreen(
         showCompletionDialog = showCompletionDialog,
         content = {
             VisualBlock("") {
-                EmojiGrid(count = number, emoji = icon.emoji, perRow = 5, sizeSp = 50)
+                EmojiGrid(count = number, emoji = icon.emoji, perRow = 5, sizeSp = 70)
             }
         },
         options = options,
@@ -546,11 +583,11 @@ fun AdditionGameScreen(
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
                 // 2 khối rõ ràng: Nhóm A + Nhóm B
-                VisualBlock("") { EmojiGrid(count = a, emoji = icon.emoji, perRow = 6, sizeSp = 40) }
+                VisualBlock("") { EmojiGrid(count = a, emoji = icon.emoji, perRow = 6, sizeSp = 60) }
                 Spacer(Modifier.height(10.dp))
                 OperatorText("+", Color(0xFF1976D2))
                 Spacer(Modifier.height(10.dp))
-                VisualBlock("") { EmojiGrid(count = b, emoji = icon.emoji, perRow = 6, sizeSp = 40) }
+                VisualBlock("") { EmojiGrid(count = b, emoji = icon.emoji, perRow = 6, sizeSp = 60) }
 
                 Spacer(Modifier.height(14.dp))
                 Text("$a + $b = ?", fontSize = 34.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1976D2))
@@ -611,11 +648,11 @@ fun SubtractionGameScreen(
         content = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 // Khối 1: Có a
-                VisualBlock("$person1 có: $a ${icon.name}") { EmojiGrid(count = a, emoji = icon.emoji, perRow = 6, sizeSp = 40) }
+                VisualBlock("$person1 có: $a ${icon.name}") { EmojiGrid(count = a, emoji = icon.emoji, perRow = 6, sizeSp = 60) }
                 Spacer(Modifier.height(10.dp))
                 OperatorText("-", Color(0xFF1976D2))
                 Spacer(Modifier.height(10.dp))
-                VisualBlock("Cho $person2: $b ${icon.name}") { EmojiGrid(count = b, emoji = icon.emoji, perRow = 6, sizeSp = 40) }
+                VisualBlock("Cho $person2: $b ${icon.name}") { EmojiGrid(count = b, emoji = icon.emoji, perRow = 6, sizeSp = 60) }
 
                 Spacer(Modifier.height(14.dp))
                 Text("$a - $b = ?", fontSize = 34.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1976D2))
@@ -817,7 +854,7 @@ fun BaseGameLayout(
                     // XP bar
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            "XP: $xp / 1000",
+                            "XP: $xp / 10",
                             fontSize = 14.sp * fontScale,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF6A1B9A)
@@ -832,7 +869,7 @@ fun BaseGameLayout(
                             Box(
                                 modifier = Modifier
                                     .fillMaxHeight()
-                                    .fillMaxWidth((xp / 1000f).coerceIn(0f, 1f))
+                                    .fillMaxWidth((xp / 10f).coerceIn(0f, 1f))
                                     .clip(RoundedCornerShape(4.dp))
                                     .background(
                                         Brush.horizontalGradient(
@@ -869,8 +906,9 @@ fun BaseGameLayout(
         }
     }
 
+    // ✅ Title bị ẩn - chỉ đọc bằng âm thanh
     val Title = @Composable {
-        Text(title, fontSize = 22.sp * fontScale, fontWeight = FontWeight.Medium)
+        // Text(title, fontSize = 22.sp * fontScale, fontWeight = FontWeight.Medium)
     }
 
     val Options = @Composable {
